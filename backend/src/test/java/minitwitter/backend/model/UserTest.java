@@ -1,6 +1,6 @@
 package minitwitter.backend.model;
 
-import minitwitter.backend.exception.DomainException;
+import minitwitter.backend.dto.UserInfo;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class UserTest {
 
     @Test
-    void deberiaCrearUnUsuarioValidoExitosamente() {
+    void shouldCreateAValidUserSuccessfully() {
         // Set up
         String username = "agomez";
         String password = "password123";
@@ -24,7 +24,7 @@ class UserTest {
     }
 
     @Test
-    void deberiaFallarSiElUsernameTieneMenosDeCincoCaracteres() {
+    void shouldFailWhenUsernameHasLessThanFiveCharacters() {
         // Set up
         String username = "abcd";
         String password = "password123";
@@ -39,7 +39,7 @@ class UserTest {
     }
 
     @Test
-    void deberiaFallarSiElUsernameTieneMasDeVeinticincoCaracteres() {
+    void shouldFailWhenUsernameHasMoreThanTwentyFiveCharacters() {
         // Set up
         String username = "a".repeat(26);
         String password = "password123";
@@ -54,7 +54,7 @@ class UserTest {
     }
 
     @Test
-    void deberiaTenerUnaListaDeTweetsVaciaAlCrearUnUsuario() {
+    void shouldHaveAnEmptyTweetListWhenUserIsCreated() {
         // Set up
         String username = "agomez";
         String password = "password123";
@@ -65,5 +65,41 @@ class UserTest {
         // Evaluación
         assertThat(user.getTweets()).isNotNull();
         assertThat(user.getTweets()).isEmpty();
+    }
+
+    @Test
+    void shouldNotBeDeletedWhenCreated() {
+        // Set up
+        User user = new User("agomez", "password123");
+
+        // Desarrollo / Evaluación
+
+        assertThat(user.isDeleted()).isFalse();
+    }
+
+    @Test
+    void shouldMarkAUserAsDeleted() {
+        // Set up
+        User user = new User("agomez", "password123");
+
+        // Desarrollo
+        user.markAsDeleted();
+
+        // Evaluación
+        assertThat(user.isDeleted()).isTrue();
+    }
+
+    @Test
+    void shouldConvertAUserToItsInfoWithoutExposingThePassword() {
+        // Set up
+        User user = new User("agomez", "password123");
+
+        // Desarrollo
+        UserInfo info = user.toInfo();
+
+        // Evaluación
+        assertThat(info.id()).isEqualTo(user.getId());
+        assertThat(info.username()).isEqualTo("agomez");
+        assertThat(info.createdAt()).isEqualTo(user.getCreatedAt());
     }
 }

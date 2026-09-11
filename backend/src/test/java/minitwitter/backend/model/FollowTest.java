@@ -1,6 +1,5 @@
 package minitwitter.backend.model;
 
-import minitwitter.backend.exception.DomainException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class FollowTest {
 
     @Test
-    void deberiaCrearUnaRelacionDeSeguimientoValidaYRegistrarLaFecha() {
+    void shouldCreateAValidFollowRelationshipAndRecordTheDate() {
         // Set up
         User follower = new User("agomez", "password123");
         User followed = new User("jperez", "password456");
@@ -24,7 +23,7 @@ class FollowTest {
     }
 
     @Test
-    void deberiaFallarSiUnUsuarioIntentaSeguirseASiMismo() {
+    void shouldFailWhenAUserTriesToFollowThemself() {
         // Set up
         User user = new User("agomez", "password123");
 
@@ -38,7 +37,7 @@ class FollowTest {
     }
 
     @Test
-    void deberiaFallarSiElFollowerEsNulo() {
+    void shouldFailWhenTheFollowerIsNull() {
         // Set up
         User followed = new User("jperez", "password456");
 
@@ -52,7 +51,7 @@ class FollowTest {
     }
 
     @Test
-    void deberiaFallarSiElFollowedEsNulo() {
+    void shouldFailWhenTheFollowedIsNull() {
         // Set up
         User follower = new User("agomez", "password123");
 
