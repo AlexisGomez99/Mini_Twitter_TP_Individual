@@ -1,8 +1,10 @@
 package minitwitter.backend.web;
 
+import minitwitter.backend.web.dto.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +26,15 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException.class})
     public ResponseEntity<ErrorResponse> handleSpringMVCParams() {
         ErrorResponse error = new ErrorResponse("Parámetros inválidos");
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    // Se lanza cuando un endpoint que requiere estar logueado (@CookieValue("token"))
+    // no recibe la cookie: sin este handler, caía en el catch-all de abajo y devolvía
+    // un 500 en vez de un 400 claro.
+    @ExceptionHandler(MissingRequestCookieException.class)
+    public ResponseEntity<ErrorResponse> handleMissingToken() {
+        ErrorResponse error = new ErrorResponse("No autenticado");
         return ResponseEntity.badRequest().body(error);
     }
 

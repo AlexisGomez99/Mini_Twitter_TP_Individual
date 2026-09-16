@@ -21,7 +21,7 @@ public abstract class Tweet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)

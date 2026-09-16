@@ -1,18 +1,10 @@
 package minitwitter.backend.service;
 
 import jakarta.persistence.EntityManagerFactory;
-import minitwitter.backend.dto.OriginalTweetInfo;
-import minitwitter.backend.dto.RetweetInfo;
-import minitwitter.backend.dto.TweetInfo;
-import minitwitter.backend.dto.UserInfo;
-import minitwitter.backend.model.DomainException;
-import minitwitter.backend.model.OriginalTweet;
-import minitwitter.backend.model.Retweet;
-import minitwitter.backend.model.User;
-import minitwitter.backend.repositorios.FollowRepository;
-import minitwitter.backend.repositorios.RetweetRepository;
-import minitwitter.backend.repositorios.TweetRepository;
-import minitwitter.backend.repositorios.UserRepository;
+import minitwitter.backend.dto.*;
+import minitwitter.backend.model.*;
+import minitwitter.backend.repositorios.*;
+import static minitwitter.backend.model.auth.Notary.notary;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +16,34 @@ public class TwitterService {
         this.emf = emf;
     }
 
+    // --- AUTH ---
+    public String login(String username, String password) {
+        return emf.callInTransaction(em -> {
+            var usuarioOptional = UserRepository.repositoryOf(em).fetchForUsernameAndPassword(username, password);
+            var usuario = usuarioOptional.orElseThrow(() -> new RuntimeException("Usuario o contraseña incorrectos"));
+            return notary().generateTokenFor(usuario.identificador());
+        });
+    }
+
+    public Integer verificarTokenAndGetIdUsuario(String token) {
+        try {
+            return notary().verifyToken(token);
+        } catch (Exception e) {
+            throw new RuntimeException("Token inválido", e);
+        }
+    }
+
+    public Integer registrarUsuario(String username, String password) {
+        return emf.callInTransaction(em -> {
+            var usuarioOptional = UserRepository.repositoryOf(em).getForUsername(username);
+            usuarioOptional.ifPresent(u -> {
+                throw new RuntimeException("El nombre de usuario ya existe");
+            });
+            var usuario = new User(username, password);
+            em.persist(usuario);
+            return usuario.identificador();
+        });
+    }
     // --- Usuarios ---
 
     public void addUser(String username, String password) {
@@ -33,7 +53,7 @@ public class TwitterService {
         });
     }
 
-    public Optional<UserInfo> getUserById(Long id) {
+    public Optional<UserInfo> getUserById(Integer id) {
         return emf.callInTransaction(em ->
                 UserRepository.repositoryOf(em).getById(id)
                         .filter(user -> !user.isDeleted())
@@ -51,7 +71,7 @@ public class TwitterService {
         );
     }
 
-    public void deleteUser(Long id) {
+    public void deleteUser(Integer id) {
         emf.runInTransaction(em ->
                 UserRepository.repositoryOf(em).getById(id)
                         .ifPresent(user -> UserRepository.repositoryOf(em).deleteUser(user))
@@ -64,7 +84,7 @@ public class TwitterService {
 
     // --- Tweets ---
 
-    public void createTweet(Long userId, String content) {
+    public void createTweet(Integer userId, String content) {
         emf.runInTransaction(em -> {
             var author = UserRepository.repositoryOf(em).getById(userId)
                     .filter(user -> !user.isDeleted())
@@ -73,7 +93,7 @@ public class TwitterService {
         });
     }
 
-    public void deleteTweet(Long tweetId) {
+    public void deleteTweet(Integer tweetId) {
         emf.runInTransaction(em -> {
             var repository = TweetRepository.repositoryOf(em);
             repository.findById(tweetId)
@@ -83,17 +103,17 @@ public class TwitterService {
         });
     }
 
-    public List<OriginalTweetInfo> listTweetsForUserId(Long userId) {
+    public List<OriginalTweetInfo> listTweetsForUserId(Integer userId) {
         return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findByAuthorId(userId));
     }
 
-    public List<TweetInfo> getTimelineForUserId(Long userId) {
+    public List<TweetInfo> getTimelineForUserId(Integer userId) {
         return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findTimelineByAuthorId(userId));
     }
 
     // --- Retweets ---
 
-    public void createRetweet(Long userId, Long originTweetId) {
+    public void createRetweet(Integer userId, Integer originTweetId) {
         emf.runInTransaction(em -> {
             var author = UserRepository.repositoryOf(em).getById(userId)
                     .filter(user -> !user.isDeleted())
@@ -107,7 +127,7 @@ public class TwitterService {
         });
     }
 
-    public void deleteRetweet(Long retweetId) {
+    public void deleteRetweet(Integer retweetId) {
         emf.runInTransaction(em -> {
             // Se busca con TweetRepository (la clase base) porque un retweet es un Tweet;
             // TweetRepository.findById ya está pensado para devolver cualquier subtipo.
@@ -118,13 +138,13 @@ public class TwitterService {
         });
     }
 
-    public List<RetweetInfo> listRetweetsForUserId(Long userId) {
+    public List<RetweetInfo> listRetweetsForUserId(Integer userId) {
         return emf.callInTransaction(em -> RetweetRepository.repositoryOf(em).findByAuthorId(userId));
     }
 
     // --- Follows ---
 
-    public void follow(Long followerId, Long followedId) {
+    public void follow(Integer followerId, Integer followedId) {
         emf.runInTransaction(em -> {
             var userRepository = UserRepository.repositoryOf(em);
             var follower = userRepository.getById(followerId)
@@ -137,7 +157,7 @@ public class TwitterService {
         });
     }
 
-    public void unfollow(Long followerId, Long followedId) {
+    public void unfollow(Integer followerId, Integer followedId) {
         emf.runInTransaction(em -> {
             var userRepository = UserRepository.repositoryOf(em);
             var follower = userRepository.getById(followerId)
@@ -150,16 +170,16 @@ public class TwitterService {
         });
     }
 
-    public boolean isFollowing(Long followerId, Long followedId) {
+    public boolean isFollowing(Integer followerId, Integer followedId) {
         return emf.callInTransaction(em ->
                 FollowRepository.repositoryOf(em).isFollowing(followerId, followedId));
     }
 
-    public List<UserInfo> getFollowers(Long userId) {
+    public List<UserInfo> getFollowers(Integer userId) {
         return emf.callInTransaction(em -> FollowRepository.repositoryOf(em).findFollowers(userId));
     }
 
-    public List<UserInfo> getFollowing(Long userId) {
+    public List<UserInfo> getFollowing(Integer userId) {
         return emf.callInTransaction(em -> FollowRepository.repositoryOf(em).findFollowing(userId));
     }
 }

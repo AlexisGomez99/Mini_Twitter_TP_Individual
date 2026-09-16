@@ -3,9 +3,9 @@ package minitwitter.backend.dto;
 import java.time.LocalDateTime;
 
 public record RetweetInfo(
-        Long id,
+        Integer id,
         String authorUsername,
-        Long originalTweetId,
+        Integer originalTweetId,
         String originalAuthorUsername,
         String originalContent,
         LocalDateTime createdAt

@@ -24,7 +24,7 @@ public class JpaRetweetRepository implements RetweetRepository {
     }
 
     @Override
-    public List<RetweetInfo> findByAuthorId(Long userId) {
+    public List<RetweetInfo> findByAuthorId(Integer userId) {
         var query = em.createQuery(
                 "select r from Retweet r "
                         + "where r.author.id = :userId and r.deleted = false "

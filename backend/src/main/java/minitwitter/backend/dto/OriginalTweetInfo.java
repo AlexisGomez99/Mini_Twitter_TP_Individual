@@ -3,7 +3,7 @@ package minitwitter.backend.dto;
 import java.time.LocalDateTime;
 
 public record OriginalTweetInfo(
-        Long id,
+        Integer id,
         String authorUsername,
         String content,
         LocalDateTime createdAt

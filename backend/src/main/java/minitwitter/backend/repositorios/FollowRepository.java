@@ -15,9 +15,9 @@ public interface FollowRepository {
 
     void unfollow(User follower, User followed);
 
-    boolean isFollowing(Long followerId, Long followedId);
+    boolean isFollowing(Integer followerId, Integer followedId);
 
-    List<UserInfo> findFollowers(Long userId);
+    List<UserInfo> findFollowers(Integer userId);
 
-    List<UserInfo> findFollowing(Long userId);
+    List<UserInfo> findFollowing(Integer userId);
 }

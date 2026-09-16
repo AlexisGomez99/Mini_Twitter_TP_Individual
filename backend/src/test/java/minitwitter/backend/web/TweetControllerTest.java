@@ -1,6 +1,7 @@
 package minitwitter.backend.web;
 
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.servlet.http.Cookie;
 import minitwitter.backend.service.TwitterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,8 +30,9 @@ class TweetControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private Long agomezId;
-    private Long jperezId;
+    private Integer agomezId;
+    private Integer jperezId;
+    private Cookie token;
 
     @BeforeEach
     void setUp() {
@@ -42,6 +44,8 @@ class TweetControllerTest {
 
         agomezId = twitterService.getUserByUsername("agomez").orElseThrow().id();
         jperezId = twitterService.getUserByUsername("jperez").orElseThrow().id();
+
+        token = new Cookie("token", twitterService.login("agomez", "password123"));
     }
 
     @Test
@@ -51,7 +55,8 @@ class TweetControllerTest {
 
         mockMvc.perform(post("/tweets")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isOk());
     }
 
@@ -62,7 +67,8 @@ class TweetControllerTest {
 
         mockMvc.perform(post("/tweets")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Usuario no encontrado: 999999")));
     }
@@ -72,7 +78,7 @@ class TweetControllerTest {
     void getTweets_soloOriginalesDelUsuario_ok() throws Exception {
         twitterService.createTweet(agomezId, "Tweet de Ana");
 
-        mockMvc.perform(get("/tweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/tweets").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -84,10 +90,10 @@ class TweetControllerTest {
     @DisplayName("GET /tweets/timeline mezcla originales y retweets del usuario")
     void getTweetsTimeline_mezclaOriginalesYRetweets_ok() throws Exception {
         twitterService.createTweet(jperezId, "Tweet de Luis");
-        Long tweetId = twitterService.listTweetsForUserId(jperezId).get(0).id();
+        Integer tweetId = twitterService.listTweetsForUserId(jperezId).get(0).id();
         twitterService.createRetweet(agomezId, tweetId);
 
-        mockMvc.perform(get("/tweets/timeline").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/tweets/timeline").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
     }
@@ -96,12 +102,20 @@ class TweetControllerTest {
     @DisplayName("DELETE /tweets/{id} borra el tweet correctamente")
     void deleteTweets_tweetExistente_ok() throws Exception {
         twitterService.createTweet(agomezId, "Tweet a borrar");
-        Long tweetId = twitterService.listTweetsForUserId(agomezId).get(0).id();
+        Integer tweetId = twitterService.listTweetsForUserId(agomezId).get(0).id();
 
-        mockMvc.perform(delete("/tweets/" + tweetId))
+        mockMvc.perform(delete("/tweets/" + tweetId).cookie(token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/tweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/tweets").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /tweets retorna error 400 si no se envía la cookie de sesión")
+    void getTweets_sinToken_error400() throws Exception {
+        mockMvc.perform(get("/tweets").param("userId", agomezId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 }

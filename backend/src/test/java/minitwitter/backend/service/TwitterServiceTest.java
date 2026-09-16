@@ -27,8 +27,8 @@ class TwitterServiceTest {
     private User agomez;
     private User jperez;
     private OriginalTweet jperezTweet;
-    private Long agomezId;
-    private Long jperezId;
+    private Integer agomezId;
+    private Integer jperezId;
 
     @BeforeAll
     static void beforeEverything() {
@@ -55,6 +55,67 @@ class TwitterServiceTest {
 
         agomezId = agomez.getId();
         jperezId = jperez.getId();
+    }
+
+    // --- Auth ---
+
+    @Test
+    void shouldLoginWithValidCredentialsAndReturnATokenForTheUser() {
+        // Set up (agomez cargado en beforeEach con password "password123")
+
+        // Desarrollo
+        String token = twitterService.login("agomez", "password123");
+
+        // Evaluación: el token generado corresponde al id real de agomez
+        assertThat(twitterService.verificarTokenAndGetIdUsuario(token)).isEqualTo(agomezId);
+    }
+
+    @Test
+    void shouldFailToLoginWithAnIncorrectPassword() {
+        // Set up (agomez cargado en beforeEach)
+
+        // Desarrollo / Evaluación
+        assertThatThrownBy(() -> twitterService.login("agomez", "password_incorrecta"))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void shouldFailToLoginWithANonexistentUsername() {
+        // Set up (usuarios cargados en beforeEach, ninguno se llama "no_existe")
+
+        // Desarrollo / Evaluación
+        assertThatThrownBy(() -> twitterService.login("no_existe", "cualquier_clave"))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void shouldFailToVerifyAnInvalidToken() {
+        // Set up
+        String invalidToken = "esto-no-es-un-jwt-valido";
+
+        // Desarrollo / Evaluación
+        assertThatThrownBy(() -> twitterService.verificarTokenAndGetIdUsuario(invalidToken))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void shouldRegisterANewUserAndReturnItsId() {
+        // Set up (agomez y jperez ya existen; se registra uno distinto)
+
+        // Desarrollo
+        Integer newUserId = twitterService.registrarUsuario("nuevo_user", "clave12345");
+
+        // Evaluación
+        assertThat(newUserId).isEqualTo(twitterService.getUserByUsername("nuevo_user").orElseThrow().id());
+    }
+
+    @Test
+    void shouldFailToRegisterAUsernameThatAlreadyExists() {
+        // Set up (agomez cargado en beforeEach)
+
+        // Desarrollo / Evaluación
+        assertThatThrownBy(() -> twitterService.registrarUsuario("agomez", "otra_clave"))
+                .isInstanceOf(RuntimeException.class);
     }
 
     // --- Usuarios ---
@@ -110,7 +171,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo
-        var found = twitterService.getUserById(999999L);
+        var found = twitterService.getUserById(999999);
 
         // Evaluación
         assertThat(found).isEmpty();
@@ -144,7 +205,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteUser(999999L)).doesNotThrowAnyException();
+        assertThatCode(() -> twitterService.deleteUser(999999)).doesNotThrowAnyException();
     }
 
     // --- Tweets ---
@@ -167,7 +228,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createTweet(999999L, "contenido"))
+        assertThatThrownBy(() -> twitterService.createTweet(999999, "contenido"))
                 .isInstanceOf(DomainException.class);
     }
 
@@ -185,7 +246,7 @@ class TwitterServiceTest {
     void shouldDeleteAnExistingTweet() {
         // Set up
         twitterService.createTweet(agomezId, "Tweet a borrar");
-        Long tweetId = twitterService.listTweetsForUserId(agomezId).get(0).id();
+        Integer tweetId = twitterService.listTweetsForUserId(agomezId).get(0).id();
 
         // Desarrollo
         twitterService.deleteTweet(tweetId);
@@ -199,7 +260,7 @@ class TwitterServiceTest {
         // Set up (base sin ningún tweet con id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteTweet(999999L)).doesNotThrowAnyException();
+        assertThatCode(() -> twitterService.deleteTweet(999999)).doesNotThrowAnyException();
     }
 
     @Test
@@ -258,7 +319,7 @@ class TwitterServiceTest {
         // Set up (jperezTweet cargado en beforeEach, ningún usuario tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(999999L, jperezTweet.getId()))
+        assertThatThrownBy(() -> twitterService.createRetweet(999999, jperezTweet.getId()))
                 .isInstanceOf(DomainException.class);
     }
 
@@ -267,7 +328,7 @@ class TwitterServiceTest {
         // Set up (agomez cargado en beforeEach, ningún tweet tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(agomezId, 999999L))
+        assertThatThrownBy(() -> twitterService.createRetweet(agomezId, 999999))
                 .isInstanceOf(DomainException.class);
     }
 
@@ -325,7 +386,7 @@ class TwitterServiceTest {
     void shouldDeleteAnExistingRetweet() {
         // Set up
         twitterService.createRetweet(agomezId, jperezTweet.getId());
-        Long retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
+        Integer retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
 
         // Desarrollo
         twitterService.deleteRetweet(retweetId);
@@ -339,7 +400,7 @@ class TwitterServiceTest {
         // Set up (base sin ningún retweet con id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteRetweet(999999L)).doesNotThrowAnyException();
+        assertThatCode(() -> twitterService.deleteRetweet(999999)).doesNotThrowAnyException();
     }
 
     @Test
@@ -373,7 +434,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(999999L, jperezId))
+        assertThatThrownBy(() -> twitterService.follow(999999, jperezId))
                 .isInstanceOf(DomainException.class);
     }
 
@@ -382,7 +443,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(agomezId, 999999L))
+        assertThatThrownBy(() -> twitterService.follow(agomezId, 999999))
                 .isInstanceOf(DomainException.class);
     }
 
@@ -423,7 +484,7 @@ class TwitterServiceTest {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.unfollow(999999L, jperezId))
+        assertThatThrownBy(() -> twitterService.unfollow(999999, jperezId))
                 .isInstanceOf(DomainException.class);
     }
 

@@ -16,5 +16,5 @@ public interface RetweetRepository {
     // Soft delete: no borra la fila (ver Tweet.markAsDeleted).
     void delete(Retweet retweet);
 
-    List<RetweetInfo> findByAuthorId(Long userId);
+    List<RetweetInfo> findByAuthorId(Integer userId);
 }

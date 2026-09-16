@@ -3,6 +3,7 @@ package minitwitter.backend.web;
 import minitwitter.backend.dto.OriginalTweetInfo;
 import minitwitter.backend.dto.TweetInfo;
 import minitwitter.backend.service.TwitterService;
+import minitwitter.backend.web.dto.NewTweetRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,22 +17,26 @@ public class TweetController {
     }
 
     @PostMapping("/tweets")
-    public void createTweet(@RequestBody NewTweetRequest newTweet) {
+    public void createTweet(@RequestBody NewTweetRequest newTweet, @CookieValue("token") String token) {
+        this.twitterService.verificarTokenAndGetIdUsuario(token);
         this.twitterService.createTweet(newTweet.userId(), newTweet.content());
     }
 
     @GetMapping("/tweets")
-    public List<OriginalTweetInfo> tweetsForUserId(@RequestParam Long userId) {
+    public List<OriginalTweetInfo> tweetsForUserId(@RequestParam Integer userId, @CookieValue("token") String token) {
+        this.twitterService.verificarTokenAndGetIdUsuario(token);
         return this.twitterService.listTweetsForUserId(userId);
     }
 
     @GetMapping("/tweets/timeline")
-    public List<TweetInfo> timelineForUserId(@RequestParam Long userId) {
+    public List<TweetInfo> timelineForUserId(@RequestParam Integer userId, @CookieValue("token") String token) {
+        this.twitterService.verificarTokenAndGetIdUsuario(token);
         return this.twitterService.getTimelineForUserId(userId);
     }
 
     @DeleteMapping("/tweets/{tweetId}")
-    public void deleteTweet(@PathVariable Long tweetId) {
+    public void deleteTweet(@PathVariable Integer tweetId, @CookieValue("token") String token) {
+        this.twitterService.verificarTokenAndGetIdUsuario(token);
         this.twitterService.deleteTweet(tweetId);
     }
 }

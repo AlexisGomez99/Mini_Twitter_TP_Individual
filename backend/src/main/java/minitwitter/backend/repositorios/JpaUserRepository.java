@@ -22,8 +22,16 @@ public class JpaUserRepository implements UserRepository {
     }
 
     @Override
-    public Optional<User> getById(Long id) {
+    public Optional<User> getById(Integer id) {
         return Optional.ofNullable(em.find(User.class, id));
+    }
+
+    @Override
+    public Optional<User> fetchForUsernameAndPassword(String username, String password) {
+        var exist = em.createQuery("from User u where u.username = :username and u.password = :password", User.class);
+        exist.setParameter("username", username);
+        exist.setParameter("password", password);
+        return Optional.ofNullable(exist.getSingleResultOrNull());
     }
 
     @Override

@@ -18,7 +18,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false, unique = true, length = 25)
     private String username;
@@ -48,6 +48,7 @@ public class User {
 
     public User(String username, String password) {
         setUsername(username);
+        //encriptar antes de guardar
         this.password = password;
         this.createdAt = LocalDateTime.now();
     }
@@ -71,5 +72,9 @@ public class User {
 
     public UserInfo toInfo() {
         return new UserInfo(this.id, this.username, this.createdAt);
+    }
+
+    public int identificador() {
+        return id;
     }
 }

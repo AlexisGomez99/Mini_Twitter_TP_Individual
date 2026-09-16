@@ -64,7 +64,7 @@ class JpaUserRepositoryTest {
     @Test
     void shouldFindAnExistingUserById() {
         // Set up
-        Long id = repository.getForUsername("agomez").orElseThrow().getId();
+        Integer id = repository.getForUsername("agomez").orElseThrow().getId();
 
         // Desarrollo
         var found = repository.getById(id);
@@ -79,7 +79,41 @@ class JpaUserRepositoryTest {
         // Set up (datos cargados en beforeEach, ningún usuario tiene id 999999)
 
         // Desarrollo
-        var found = repository.getById(999999L);
+        var found = repository.getById(999999);
+
+        // Evaluación
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    void shouldFindAUserByUsernameAndPassword() {
+        // Set up (agomez cargado en beforeEach con password "password123")
+
+        // Desarrollo
+        var found = repository.fetchForUsernameAndPassword("agomez", "password123");
+
+        // Evaluación
+        assertThat(found).isPresent();
+        assertThat(found.get().getUsername()).isEqualTo("agomez");
+    }
+
+    @Test
+    void shouldReturnEmptyWhenThePasswordIsIncorrect() {
+        // Set up (agomez cargado en beforeEach)
+
+        // Desarrollo
+        var found = repository.fetchForUsernameAndPassword("agomez", "password_incorrecta");
+
+        // Evaluación
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    void shouldReturnEmptyWhenFetchingByUsernameAndPasswordForANonexistentUsername() {
+        // Set up (datos cargados en beforeEach, ninguno se llama "no_existe")
+
+        // Desarrollo
+        var found = repository.fetchForUsernameAndPassword("no_existe", "cualquier_clave");
 
         // Evaluación
         assertThat(found).isEmpty();
@@ -120,8 +154,8 @@ class JpaUserRepositoryTest {
         em.getTransaction().begin();
         User agomez = repository.getForUsername("agomez").orElseThrow();
         User jperez = repository.getForUsername("jperez").orElseThrow();
-        Long agomezId = agomez.getId();
-        Long jperezId = jperez.getId();
+        Integer agomezId = agomez.getId();
+        Integer jperezId = jperez.getId();
 
         OriginalTweet agomezTweet = new OriginalTweet(agomez, "Tweet de Ana");
         Retweet jperezRetweet = new Retweet(jperez, agomezTweet);

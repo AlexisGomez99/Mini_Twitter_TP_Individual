@@ -18,13 +18,13 @@ public interface TweetRepository {
 
     // Devuelve el tweet exista o no haya sido borrado: hace falta poder resolver el
     // origen de un retweet aunque esté marcado como no disponible.
-    Optional<Tweet> findById(Long id);
+    Optional<Tweet> findById(Integer id);
 
     // Soft delete: no borra la fila (ver Tweet.markAsDeleted), para que los retweets
     // que lo tienen como origen no pierdan la referencia.
     void delete(OriginalTweet tweet);
 
-    List<OriginalTweetInfo> findByAuthorId(Long userId);
+    List<OriginalTweetInfo> findByAuthorId(Integer userId);
 
-    List<TweetInfo> findTimelineByAuthorId(Long userId);
+    List<TweetInfo> findTimelineByAuthorId(Integer userId);
 }

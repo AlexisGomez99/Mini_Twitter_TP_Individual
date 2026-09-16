@@ -22,7 +22,7 @@ public class JpaTweetRepository implements TweetRepository {
     }
 
     @Override
-    public Optional<Tweet> findById(Long id) {
+    public Optional<Tweet> findById(Integer id) {
         return Optional.ofNullable(em.find(Tweet.class, id));
     }
 
@@ -32,7 +32,7 @@ public class JpaTweetRepository implements TweetRepository {
     }
 
     @Override
-    public List<OriginalTweetInfo> findByAuthorId(Long userId) {
+    public List<OriginalTweetInfo> findByAuthorId(Integer userId) {
         var query = em.createQuery(
                 "select o from OriginalTweet o "
                         + "where o.author.id = :userId and o.deleted = false "
@@ -43,7 +43,7 @@ public class JpaTweetRepository implements TweetRepository {
     }
 
     @Override
-    public List<TweetInfo> findTimelineByAuthorId(Long userId) {
+    public List<TweetInfo> findTimelineByAuthorId(Integer userId) {
         var query = em.createQuery(
                 "select t from Tweet t "
                         + "where t.author.id = :userId and t.deleted = false "

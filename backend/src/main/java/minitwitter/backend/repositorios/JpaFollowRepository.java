@@ -29,7 +29,7 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
-    public boolean isFollowing(Long followerId, Long followedId) {
+    public boolean isFollowing(Integer followerId, Integer followedId) {
         var query = em.createQuery(
                 "select count(f) from Follow f "
                         + "where f.follower.id = :followerId "
@@ -41,7 +41,7 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
-    public List<UserInfo> findFollowers(Long userId) {
+    public List<UserInfo> findFollowers(Integer userId) {
         // No hace falta filtrar cuentas eliminadas acá: User.markAsDeleted() ya borra
         // todas las relaciones de follow del usuario (en ambos sentidos) al eliminarlo.
         var query = em.createQuery(
@@ -52,7 +52,7 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
-    public List<UserInfo> findFollowing(Long userId) {
+    public List<UserInfo> findFollowing(Integer userId) {
         var query = em.createQuery(
                 "select f.followed from Follow f where f.follower.id = :userId",
                 User.class);

@@ -16,7 +16,9 @@ public interface UserRepository {
 
     // Buscar por id, no solo por username: el username puede cambiar en algún momento,
     // el id no. Preferible para cualquier referencia estable a un usuario.
-    Optional<User> getById(Long id);
+    Optional<User> getById(Integer id);
+
+    Optional<User> fetchForUsernameAndPassword(String username, String password);
 
     void addUser(User user);
 

@@ -97,7 +97,7 @@ class JpaTweetRepositoryTest {
         // Set up (datos cargados en beforeEach, ningún tweet tiene id 999999)
 
         // Desarrollo
-        var found = repository.findById(999999L);
+        var found = repository.findById(999999);
 
         // Evaluación
         assertThat(found).isEmpty();

@@ -1,6 +1,7 @@
 package minitwitter.backend.web;
 
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.servlet.http.Cookie;
 import minitwitter.backend.service.TwitterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,8 +30,9 @@ class FollowControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private Long agomezId;
-    private Long jperezId;
+    private Integer agomezId;
+    private Integer jperezId;
+    private Cookie token;
 
     @BeforeEach
     void setUp() {
@@ -42,6 +44,8 @@ class FollowControllerTest {
 
         agomezId = twitterService.getUserByUsername("agomez").orElseThrow().id();
         jperezId = twitterService.getUserByUsername("jperez").orElseThrow().id();
+
+        token = new Cookie("token", twitterService.login("agomez", "password123"));
     }
 
     @Test
@@ -51,7 +55,8 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/follows")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isOk());
     }
 
@@ -62,7 +67,8 @@ class FollowControllerTest {
 
         mockMvc.perform(post("/follows")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Usuario no encontrado: 999999")));
     }
@@ -74,12 +80,14 @@ class FollowControllerTest {
 
         mockMvc.perform(delete("/follows")
                         .param("followerId", agomezId.toString())
-                        .param("followedId", jperezId.toString()))
+                        .param("followedId", jperezId.toString())
+                        .cookie(token))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/follows/is-following")
                         .param("followerId", agomezId.toString())
-                        .param("followedId", jperezId.toString()))
+                        .param("followedId", jperezId.toString())
+                        .cookie(token))
                 .andExpect(content().string("false"));
     }
 
@@ -90,7 +98,8 @@ class FollowControllerTest {
 
         mockMvc.perform(get("/follows/is-following")
                         .param("followerId", agomezId.toString())
-                        .param("followedId", jperezId.toString()))
+                        .param("followedId", jperezId.toString())
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(content().string("true"));
     }
@@ -100,7 +109,7 @@ class FollowControllerTest {
     void getFollowsFollowers_devuelveLosSeguidores_ok() throws Exception {
         twitterService.follow(agomezId, jperezId);
 
-        mockMvc.perform(get("/follows/followers").param("userId", jperezId.toString()))
+        mockMvc.perform(get("/follows/followers").param("userId", jperezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].username", is("agomez")));
@@ -111,9 +120,17 @@ class FollowControllerTest {
     void getFollowsFollowing_devuelveAQuienesSigue_ok() throws Exception {
         twitterService.follow(agomezId, jperezId);
 
-        mockMvc.perform(get("/follows/following").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/follows/following").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].username", is("jperez")));
+    }
+
+    @Test
+    @DisplayName("GET /follows/following retorna error 400 si no se envía la cookie de sesión")
+    void getFollowsFollowing_sinToken_error400() throws Exception {
+        mockMvc.perform(get("/follows/following").param("userId", agomezId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 }

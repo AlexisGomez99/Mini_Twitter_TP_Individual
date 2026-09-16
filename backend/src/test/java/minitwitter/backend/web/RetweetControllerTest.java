@@ -1,6 +1,7 @@
 package minitwitter.backend.web;
 
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.servlet.http.Cookie;
 import minitwitter.backend.service.TwitterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,9 +30,10 @@ class RetweetControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    private Long agomezId;
-    private Long jperezId;
-    private Long jperezTweetId;
+    private Integer agomezId;
+    private Integer jperezId;
+    private Integer jperezTweetId;
+    private Cookie token;
 
     @BeforeEach
     void setUp() {
@@ -46,6 +48,8 @@ class RetweetControllerTest {
 
         twitterService.createTweet(jperezId, "Tweet de Luis");
         jperezTweetId = twitterService.listTweetsForUserId(jperezId).get(0).id();
+
+        token = new Cookie("token", twitterService.login("agomez", "password123"));
     }
 
     @Test
@@ -55,7 +59,8 @@ class RetweetControllerTest {
 
         mockMvc.perform(post("/retweets")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isOk());
     }
 
@@ -66,7 +71,8 @@ class RetweetControllerTest {
 
         mockMvc.perform(post("/retweets")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
+                        .content(json)
+                        .cookie(token))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("Tweet no encontrado: 999999")));
     }
@@ -76,7 +82,7 @@ class RetweetControllerTest {
     void getRetweets_soloDelUsuario_ok() throws Exception {
         twitterService.createRetweet(agomezId, jperezTweetId);
 
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].authorUsername", is("agomez")))
@@ -88,10 +94,10 @@ class RetweetControllerTest {
     void getRetweets_origenBorrado_muestraNoDisponible() throws Exception {
         twitterService.createRetweet(agomezId, jperezTweetId);
 
-        mockMvc.perform(delete("/tweets/" + jperezTweetId))
+        mockMvc.perform(delete("/tweets/" + jperezTweetId).cookie(token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].originalContent", is("Publicación no disponible")))
@@ -102,12 +108,20 @@ class RetweetControllerTest {
     @DisplayName("DELETE /retweets/{id} borra el retweet correctamente")
     void deleteRetweets_retweetExistente_ok() throws Exception {
         twitterService.createRetweet(agomezId, jperezTweetId);
-        Long retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
+        Integer retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
 
-        mockMvc.perform(delete("/retweets/" + retweetId))
+        mockMvc.perform(delete("/retweets/" + retweetId).cookie(token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("GET /retweets retorna error 400 si no se envía la cookie de sesión")
+    void getRetweets_sinToken_error400() throws Exception {
+        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 }
