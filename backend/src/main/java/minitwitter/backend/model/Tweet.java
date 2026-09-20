@@ -1,74 +1,60 @@
 package minitwitter.backend.model;
 
-import minitwitter.backend.exception.DomainException;
+import minitwitter.backend.dto.TweetInfo;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tweets")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "tweet_type")
 @Getter
-@Setter
-@NoArgsConstructor
-public class Tweet {
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public abstract class Tweet {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(length = 280)
-    private String content;
-
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private Integer id;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    @ManyToOne
-    @JoinColumn(name = "origin_tweet_id")
-    private Tweet origin;
+    // Setter público solo acá: hace falta en los tests para fijar la fecha de creación
+    // y así garantizar el orden del timeline sin depender de LocalDateTime.now().
+    @Setter
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
 
-    // Tweet Original
-    public Tweet(User author, String content) {
+    // Soft delete: se conserva la fila (sin cascade/orphanRemoval acá) para que un
+    // retweet de otro usuario que tenga a este tweet como origen no pierda su referencia.
+    @Column(nullable = false)
+    private boolean deleted;
+
+    // Retweets que tienen a este tweet como origen. Sin cascade: borrar (soft-delete)
+    // este tweet no debe tocar para nada los retweets que lo referencian, para que
+    // puedan seguir mostrándose (con el origen marcado como no disponible).
+    @OneToMany(mappedBy = "origin")
+    private List<Retweet> retweets = new ArrayList<>();
+
+    protected Tweet(User author) {
         if (author == null) {
             throw new DomainException("El tweet debe tener un autor.");
         }
-        validateContent(content);
         this.author = author;
-        this.content = content;
         this.createdAt = LocalDateTime.now();
     }
 
-    // Re-tweet
-    public Tweet(User author, Tweet origin) {
-        if (author == null) {
-            throw new DomainException("El retweet debe tener un autor.");
-        }
-        if (origin == null) {
-            throw new DomainException("El tweet de origen no puede ser nulo.");
-        }
-        if (origin.getAuthor().equals(author)) {
-            throw new DomainException("No podés hacer re-tweet de tu propio tweet.");
-        }
-
-        this.author = author;
-        this.origin = origin;
-        this.content = null; // re-tweet no tiene texto adicional
-        this.createdAt = LocalDateTime.now();
+    public void markAsDeleted() {
+        this.deleted = true;
     }
 
-    public boolean isRetweet() {
-        return this.origin != null;
-    }
-
-    private void validateContent(String content) {
-        if (content == null || content.trim().isEmpty() || content.length() > 280) {
-            throw new DomainException("El tweet debe tener entre 1 y 280 caracteres.");
-        }
-    }
+    public abstract TweetInfo toInfo();
 }
