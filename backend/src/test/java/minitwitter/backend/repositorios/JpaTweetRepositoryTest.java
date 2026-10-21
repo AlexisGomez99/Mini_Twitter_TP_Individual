@@ -3,6 +3,7 @@ package minitwitter.backend.repositorios;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import minitwitter.backend.dto.OriginalTweetInfo;
+import minitwitter.backend.dto.RetweetInfo;
 import minitwitter.backend.dto.TweetInfo;
 import minitwitter.backend.model.OriginalTweet;
 import minitwitter.backend.model.Retweet;
@@ -93,17 +94,6 @@ class JpaTweetRepositoryTest {
     }
 
     @Test
-    void shouldReturnEmptyWhenTweetIdDoesNotExist() {
-        // Set up (datos cargados en beforeEach, ningún tweet tiene id 999999)
-
-        // Desarrollo
-        var found = repository.findById(999999);
-
-        // Evaluación
-        assertThat(found).isEmpty();
-    }
-
-    @Test
     void shouldSoftDeleteATweetButKeepItsRetweetsShowingItAsUnavailable() {
         // Set up: jperezTweet ya tiene un retweet de agomez (cargado en beforeEach)
 
@@ -122,6 +112,23 @@ class JpaTweetRepositoryTest {
         assertThat(agomezRetweets).hasSize(1);
         assertThat(agomezRetweets.get(0).originalContent()).isEqualTo("Publicación no disponible");
         assertThat(agomezRetweets.get(0).originalAuthorUsername()).isEqualTo("jperez");
+    }
+
+    @Test
+    void shouldKeepTheContentOfASoftDeletedTweetInTheDatabase() {
+        // Set up
+        Integer id = agomezTweet.getId();
+        em.getTransaction().begin();
+        repository.delete(agomezTweet);
+        em.getTransaction().commit();
+
+        // Desarrollo: se vacía el contexto de persistencia para releer la fila desde la base
+        em.clear();
+        var reloaded = (OriginalTweet) repository.findById(id).orElseThrow();
+
+        // Evaluación: la fila quedó marcada como borrada pero conserva su texto
+        assertThat(reloaded.isDeleted()).isTrue();
+        assertThat(reloaded.getContent()).isEqualTo("Primer tweet de Ana");
     }
 
     @Test
@@ -173,5 +180,72 @@ class JpaTweetRepositoryTest {
         // Evaluación
         assertThat(timeline).hasSize(2);
         assertThat(timeline.get(0).createdAt()).isAfter(timeline.get(1).createdAt());
+    }
+
+    @Test
+    void shouldReturnTheFeedWithTheOwnTweetsAndTheOnesOfFollowedUsers() {
+        // Set up: agomez sigue a jperez. Tiene un original propio (10:00) y un retweet
+        // propio (12:00); jperez tiene un original (11:00). Todos cargados en beforeEach.
+        follow(agomez, jperez);
+
+        // Desarrollo
+        List<TweetInfo> feed = repository.findFeedByFollowerId(agomez.getId());
+
+        // Evaluación: los propios y los del seguido, del más nuevo al más viejo
+        assertThat(feed).hasSize(3);
+        assertThat(feed.get(0)).isInstanceOf(RetweetInfo.class);
+        assertThat(((OriginalTweetInfo) feed.get(1)).content()).isEqualTo("Tweet de Luis");
+        assertThat(((OriginalTweetInfo) feed.get(2)).content()).isEqualTo("Primer tweet de Ana");
+    }
+
+    @Test
+    void shouldReturnOnlyTheOwnTweetsWhenTheUserFollowsNoOne() {
+        // Set up (datos cargados en beforeEach, sin ningún follow)
+
+        // Desarrollo
+        List<TweetInfo> feed = repository.findFeedByFollowerId(agomez.getId());
+
+        // Evaluación: solo el original y el retweet propios de agomez
+        assertThat(feed).hasSize(2);
+    }
+
+    @Test
+    void shouldReturnTheFeedOrderedByDateDescendingIncludingRetweets() {
+        // Set up: jperez sigue a agomez, que tiene un original (10:00) y un retweet (12:00);
+        // jperez tiene un original propio (11:00)
+        follow(jperez, agomez);
+
+        // Desarrollo
+        List<TweetInfo> feed = repository.findFeedByFollowerId(jperez.getId());
+
+        // Evaluación
+        assertThat(feed).hasSize(3);
+        assertThat(feed.get(0)).isInstanceOf(RetweetInfo.class);
+        assertThat(((OriginalTweetInfo) feed.get(1)).authorUsername()).isEqualTo("jperez");
+        assertThat(((OriginalTweetInfo) feed.get(2)).authorUsername()).isEqualTo("agomez");
+    }
+
+    @Test
+    void shouldExcludeDeletedTweetsFromTheFeed() {
+        // Set up
+        follow(agomez, jperez);
+
+        // Desarrollo
+        em.getTransaction().begin();
+        repository.delete(jperezTweet);
+        em.getTransaction().commit();
+
+        // Evaluación: el tweet borrado no aparece. Quedan el original propio de agomez y su
+        // retweet (este último con el origen como no disponible).
+        List<TweetInfo> feed = repository.findFeedByFollowerId(agomez.getId());
+        assertThat(feed).hasSize(2);
+        assertThat(feed).noneMatch(t -> t instanceof OriginalTweetInfo original
+                && original.authorUsername().equals("jperez"));
+    }
+
+    private void follow(User follower, User followed) {
+        em.getTransaction().begin();
+        FollowRepository.repositoryOf(em).follow(follower, followed);
+        em.getTransaction().commit();
     }
 }

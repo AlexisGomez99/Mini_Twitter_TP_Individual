@@ -54,20 +54,33 @@ dto/            → Records de solo lectura (*Info) que devuelve el servicio, si
 ### Modelo de datos
 
 - `Tweet` es una jerarquía (`SINGLE_TABLE`): `OriginalTweet` (con contenido propio) y `Retweet` (que apunta a otro `Tweet` como origen).
-- **Los borrados son soft delete, no `DELETE` físico.** Tanto `User` como `Tweet` tienen un flag `deleted`: al "borrar" una cuenta o un tweet, la fila se conserva marcada como eliminada en vez de removerse. Esto evita que un retweet de otro usuario quede con una referencia rota: si el tweet o la cuenta original desaparecen, el retweet se sigue mostrando, pero con el contenido reemplazado por `"Publicación no disponible"` y/o el autor por `"Cuenta eliminada"`.
+- **Los borrados son soft delete, no `DELETE` físico.** Tanto `User` como `Tweet` tienen un flag `deleted`: al "borrar" una cuenta o un tweet, la fila se conserva marcada como eliminada en vez de removerse, y el texto del tweet también se conserva en la base (solo se oculta al mostrarlo). Esto evita que un retweet de otro usuario quede con una referencia rota: si el tweet o la cuenta original desaparecen, el retweet se sigue mostrando, pero con el contenido reemplazado por `"Publicación no disponible"` y/o el autor por `"Cuenta eliminada"`.
 - Al borrar un usuario, sus propios tweets se ocultan en cascada (a nivel de modelo Java) y sus relaciones de "follow" (en ambos sentidos) sí se eliminan de verdad, ya que no tienen valor sin una cuenta activa.
 
 ### Búsquedas por id, no por username
 
-Salvo un caso puntual, toda la API trabaja con **ids** (`Long`) en vez de usernames, porque el username puede cambiar con el tiempo y el id no:
+Salvo un caso puntual, toda la API trabaja con **ids** (`Integer`) en vez de usernames, porque el username puede cambiar con el tiempo y el id no:
 
 - `GET /users/{id}`, `DELETE /users/{id}`, `GET /tweets?userId=`, `POST /follows` con `followerId`/`followedId`, etc.
-- La única excepción es `GET /users?username=`, pensada para un caso concreto donde todavía no se conoce el id (por ejemplo, un futuro login).
+- La única excepción es `GET /users?username=`, pensada para el caso puntual en que todavía no se conoce el id de la persona.
+
+### Autenticación
+
+- `POST /login` valida usuario y contraseña y responde con una cookie `token` (JWT, `HttpOnly`, 3 minutos). El cuerpo de la respuesta va vacío.
+- `POST /logout` expira la cookie `token` (`Max-Age=0`). Lo hace el backend porque la cookie es `HttpOnly`. No exige estar logueado. El JWT no se revoca del lado del servidor (es stateless): solo se borra de la cookie del navegador.
+- Todos los endpoints requieren esa cookie, **salvo** `POST /login`, `POST /logout`, `POST /registrar` y `POST /users`.
+- Sin cookie, con un token inválido o con credenciales incorrectas, la API responde **401** con `{ "message": "..." }`. El resto de los errores de negocio siguen siendo **400**.
+- Como la cookie es `HttpOnly` el frontend no puede leerla; para saber quién está logueado consulta `GET /me`.
+- **CORS:** el backend acepta pedidos con credenciales desde `http://localhost:5173` (el frontend con Vite). El origen se cambia en `WebConfig`.
 
 ## Endpoints principales
 
 | Método | Ruta                       | Descripción                                   |
 |--------|----------------------------|------------------------------------------------|
+| POST   | `/login`                   | Inicia sesión (`{ username, password }`) y devuelve la cookie `token` |
+| POST   | `/logout`                  | Cierra sesión: expira la cookie `token`        |
+| POST   | `/registrar`               | Registra un usuario nuevo (`{ username, password }`) |
+| GET    | `/me`                      | Usuario logueado según la cookie `token`       |
 | POST   | `/users`                   | Crea un usuario                                |
 | GET    | `/users`                   | Lista todos los usuarios                       |
 | GET    | `/users?username=`         | Busca un usuario por username (caso puntual)   |
@@ -76,7 +89,8 @@ Salvo un caso puntual, toda la API trabaja con **ids** (`Long`) en vez de userna
 | POST   | `/tweets`                  | Crea un tweet (`{ userId, content }`)          |
 | GET    | `/tweets?userId=`          | Tweets propios de un usuario                   |
 | GET    | `/tweets/timeline?userId=` | Timeline (tweets + retweets) de un usuario     |
-| DELETE | `/tweets/{id}`             | Borra (soft delete) un tweet                   |
+| GET    | `/tweets/feed`             | Feed de inicio: tweets y retweets propios y de los usuarios que sigue quien está logueado, del más nuevo al más viejo |
+| DELETE | `/tweets/{id}`             | Borra (soft delete) un tweet propio; si es de otra persona responde 403 |
 | POST   | `/retweets`                | Crea un retweet (`{ userId, originTweetId }`)  |
 | GET    | `/retweets?userId=`        | Retweets de un usuario                         |
 | DELETE | `/retweets/{id}`           | Borra (soft delete) un retweet                 |

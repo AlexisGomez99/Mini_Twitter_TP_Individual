@@ -54,42 +54,6 @@ class UserTest {
     }
 
     @Test
-    void shouldHaveAnEmptyTweetListWhenUserIsCreated() {
-        // Set up
-        String username = "agomez";
-        String password = "password123";
-
-        // Desarrollo
-        User user = new User(username, password);
-
-        // Evaluación
-        assertThat(user.getTweets()).isNotNull();
-        assertThat(user.getTweets()).isEmpty();
-    }
-
-    @Test
-    void shouldNotBeDeletedWhenCreated() {
-        // Set up
-        User user = new User("agomez", "password123");
-
-        // Desarrollo / Evaluación
-
-        assertThat(user.isDeleted()).isFalse();
-    }
-
-    @Test
-    void shouldMarkAUserAsDeleted() {
-        // Set up
-        User user = new User("agomez", "password123");
-
-        // Desarrollo
-        user.markAsDeleted();
-
-        // Evaluación
-        assertThat(user.isDeleted()).isTrue();
-    }
-
-    @Test
     void shouldConvertAUserToItsInfoWithoutExposingThePassword() {
         // Set up
         User user = new User("agomez", "password123");

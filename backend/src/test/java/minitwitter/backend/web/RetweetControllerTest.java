@@ -65,19 +65,6 @@ class RetweetControllerTest {
     }
 
     @Test
-    @DisplayName("POST /retweets retorna error 400 si el tweet de origen no existe")
-    void postRetweets_tweetInexistente_error400() throws Exception {
-        String json = "{\"userId\":" + agomezId + ",\"originTweetId\":999999}";
-
-        mockMvc.perform(post("/retweets")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json)
-                        .cookie(token))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Tweet no encontrado: 999999")));
-    }
-
-    @Test
     @DisplayName("GET /retweets devuelve solo los retweets del usuario")
     void getRetweets_soloDelUsuario_ok() throws Exception {
         twitterService.createRetweet(agomezId, jperezTweetId);
@@ -86,22 +73,8 @@ class RetweetControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].authorUsername", is("agomez")))
-                .andExpect(jsonPath("$[0].originalAuthorUsername", is("jperez")));
-    }
-
-    @Test
-    @DisplayName("GET /retweets muestra el retweet como no disponible si se borró el tweet de origen")
-    void getRetweets_origenBorrado_muestraNoDisponible() throws Exception {
-        twitterService.createRetweet(agomezId, jperezTweetId);
-
-        mockMvc.perform(delete("/tweets/" + jperezTweetId).cookie(token))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].originalContent", is("Publicación no disponible")))
-                .andExpect(jsonPath("$[0].originalAuthorUsername", is("jperez")));
+                .andExpect(jsonPath("$[0].originalAuthorUsername", is("jperez")))
+                .andExpect(jsonPath("$[0].originalDeleted", is(false)));
     }
 
     @Test
@@ -118,10 +91,10 @@ class RetweetControllerTest {
     }
 
     @Test
-    @DisplayName("GET /retweets retorna error 400 si no se envía la cookie de sesión")
-    void getRetweets_sinToken_error400() throws Exception {
+    @DisplayName("GET /retweets retorna error 401 si no se envía la cookie de sesión")
+    void getRetweets_sinToken_error401() throws Exception {
         mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 }

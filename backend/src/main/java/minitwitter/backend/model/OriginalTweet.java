@@ -29,14 +29,8 @@ public class OriginalTweet extends Tweet {
         }
     }
 
-    // Además de marcar el tweet como borrado, se descarta el contenido: no tiene sentido
-    // seguir guardando el texto de una publicación que ya no se va a mostrar.
-    @Override
-    public void markAsDeleted() {
-        super.markAsDeleted();
-        this.content = null;
-    }
-
+    // Un tweet borrado conserva su texto en la base (para poder mostrarlo más adelante);
+    // lo que se oculta al mostrarlo es decisión de toInfo().
     @Override
     public OriginalTweetInfo toInfo() {
         String authorUsername = getAuthor().isDeleted() ? "Cuenta eliminada" : getAuthor().getUsername();

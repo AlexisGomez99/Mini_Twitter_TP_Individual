@@ -34,9 +34,16 @@ public class TweetController {
         return this.twitterService.getTimelineForUserId(userId);
     }
 
+    // El usuario sale del token (no se pasa por parámetro): es el feed de quien está logueado.
+    @GetMapping("/tweets/feed")
+    public List<TweetInfo> feed(@CookieValue("token") String token) {
+        int userId = this.twitterService.verificarTokenAndGetIdUsuario(token);
+        return this.twitterService.getFeedForUserId(userId);
+    }
+
     @DeleteMapping("/tweets/{tweetId}")
     public void deleteTweet(@PathVariable Integer tweetId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.deleteTweet(tweetId);
+        int userId = this.twitterService.verificarTokenAndGetIdUsuario(token);
+        this.twitterService.deleteTweet(userId, tweetId);
     }
 }

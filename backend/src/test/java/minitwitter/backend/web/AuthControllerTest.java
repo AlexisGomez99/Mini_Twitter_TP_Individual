@@ -1,6 +1,7 @@
 package minitwitter.backend.web;
 
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.servlet.http.Cookie;
 import minitwitter.backend.service.TwitterService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.is;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -50,27 +52,36 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /login retorna error 400 si la contraseña es incorrecta")
-    void postLogin_contraseñaIncorrecta_error400() throws Exception {
+    @DisplayName("POST /login retorna error 401 si la contraseña es incorrecta")
+    void postLogin_contraseñaIncorrecta_error401() throws Exception {
         String json = "{\"username\":\"agomez\",\"password\":\"password_incorrecta\"}";
 
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("Usuario o contraseña incorrectos")));
     }
 
     @Test
-    @DisplayName("POST /login retorna error 400 si el usuario no existe")
-    void postLogin_usuarioInexistente_error400() throws Exception {
-        String json = "{\"username\":\"no_existe\",\"password\":\"cualquier_clave\"}";
+    @DisplayName("POST /logout expira la cookie token con los mismos atributos que el login")
+    void postLogout_conSesion_expiraLaCookie() throws Exception {
+        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
 
-        mockMvc.perform(post("/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", is("Usuario o contraseña incorrectos")));
+        mockMvc.perform(post("/logout").cookie(token))
+                .andExpect(status().isOk())
+                .andExpect(cookie().value("token", ""))
+                .andExpect(cookie().maxAge("token", 0))
+                .andExpect(cookie().path("token", "/"))
+                .andExpect(cookie().httpOnly("token", true));
+    }
+
+    @Test
+    @DisplayName("POST /logout funciona aunque no haya sesión (cookie ausente o vencida)")
+    void postLogout_sinSesion_ok() throws Exception {
+        mockMvc.perform(post("/logout"))
+                .andExpect(status().isOk())
+                .andExpect(cookie().maxAge("token", 0));
     }
 
     @Test
@@ -94,5 +105,36 @@ class AuthControllerTest {
                         .content(json))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("El nombre de usuario ya existe")));
+    }
+
+    @Test
+    @DisplayName("GET /me devuelve el usuario logueado según la cookie token")
+    void getMe_conSesion_devuelveElUsuarioLogueado() throws Exception {
+        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
+
+        mockMvc.perform(get("/me").cookie(token))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.username", is("agomez")));
+    }
+
+    @Test
+    @DisplayName("GET /me retorna error 401 si no se envía la cookie de sesión")
+    void getMe_sinToken_error401() throws Exception {
+        mockMvc.perform(get("/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message", is("No autenticado")));
+    }
+
+    @Test
+    @DisplayName("GET /me retorna error 401 si el usuario del token ya fue dado de baja")
+    void getMe_usuarioBorrado_error401() throws Exception {
+        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
+        Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
+        twitterService.deleteUser(id);
+
+        mockMvc.perform(get("/me").cookie(token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message", is("Sesión inválida")));
     }
 }

@@ -8,6 +8,7 @@ public record RetweetInfo(
         Integer originalTweetId,
         String originalAuthorUsername,
         String originalContent,
+        boolean originalDeleted,
         LocalDateTime createdAt
 ) implements TweetInfo {
 }

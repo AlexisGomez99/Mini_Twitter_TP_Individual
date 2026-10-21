@@ -57,6 +57,7 @@ public class Retweet extends Tweet {
         return new RetweetInfo(
                 getId(), authorUsername,
                 getOrigin().getId(), originalAuthorUsername, originalContent,
+                getOrigin().isDeleted(),
                 getCreatedAt()
         );
     }

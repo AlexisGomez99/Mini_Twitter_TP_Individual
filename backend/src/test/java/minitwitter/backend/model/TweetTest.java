@@ -133,32 +133,8 @@ class TweetTest {
         assertThat(info.originalTweetId()).isEqualTo(originalTweet.getId());
         assertThat(info.originalAuthorUsername()).isEqualTo("agomez");
         assertThat(info.originalContent()).isEqualTo("Tweet original");
+        assertThat(info.originalDeleted()).isFalse();
         assertThat(info.createdAt()).isEqualTo(retweet.getCreatedAt());
-    }
-
-    @Test
-    void shouldNotBeDeletedWhenCreated() {
-        // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet tweet = new OriginalTweet(author, "contenido de prueba");
-
-        // Desarrollo / Evaluación
-
-        assertThat(tweet.isDeleted()).isFalse();
-    }
-
-    @Test
-    void shouldClearItsContentWhenMarkedAsDeleted() {
-        // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet tweet = new OriginalTweet(author, "contenido de prueba");
-
-        // Desarrollo
-        tweet.markAsDeleted();
-
-        // Evaluación
-        assertThat(tweet.isDeleted()).isTrue();
-        assertThat(tweet.getContent()).isNull();
     }
 
     @Test
@@ -171,7 +147,8 @@ class TweetTest {
         // Desarrollo
         OriginalTweetInfo info = tweet.toInfo();
 
-        // Evaluación
+        // Evaluación: la entidad conserva el texto, pero lo que se expone es el placeholder
+        assertThat(tweet.getContent()).isEqualTo("contenido de prueba");
         assertThat(info.content()).isEqualTo("Publicación no disponible");
         assertThat(info.authorUsername()).isEqualTo("agomez");
     }
@@ -212,6 +189,7 @@ class TweetTest {
         assertThat(info.originalTweetId()).isEqualTo(originalTweet.getId());
         assertThat(info.originalContent()).isEqualTo("Publicación no disponible");
         assertThat(info.originalAuthorUsername()).isEqualTo("agomez");
+        assertThat(info.originalDeleted()).isTrue();
     }
 
     @Test
@@ -231,5 +209,6 @@ class TweetTest {
         // Evaluación
         assertThat(info.originalAuthorUsername()).isEqualTo("Cuenta eliminada");
         assertThat(info.originalContent()).isEqualTo("Publicación no disponible");
+        assertThat(info.originalDeleted()).isTrue();
     }
 }

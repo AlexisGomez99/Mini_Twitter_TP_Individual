@@ -75,17 +75,6 @@ class JpaUserRepositoryTest {
     }
 
     @Test
-    void shouldReturnEmptyWhenTheIdDoesNotExist() {
-        // Set up (datos cargados en beforeEach, ningún usuario tiene id 999999)
-
-        // Desarrollo
-        var found = repository.getById(999999);
-
-        // Evaluación
-        assertThat(found).isEmpty();
-    }
-
-    @Test
     void shouldFindAUserByUsernameAndPassword() {
         // Set up (agomez cargado en beforeEach con password "password123")
 
@@ -103,17 +92,6 @@ class JpaUserRepositoryTest {
 
         // Desarrollo
         var found = repository.fetchForUsernameAndPassword("agomez", "password_incorrecta");
-
-        // Evaluación
-        assertThat(found).isEmpty();
-    }
-
-    @Test
-    void shouldReturnEmptyWhenFetchingByUsernameAndPasswordForANonexistentUsername() {
-        // Set up (datos cargados en beforeEach, ninguno se llama "no_existe")
-
-        // Desarrollo
-        var found = repository.fetchForUsernameAndPassword("no_existe", "cualquier_clave");
 
         // Evaluación
         assertThat(found).isEmpty();

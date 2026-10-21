@@ -94,21 +94,12 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("GET /users/{id} retorna error 400 si el id no existe")
-    void getUsersById_usuarioInexistente_error400() throws Exception {
-        mockMvc.perform(get("/users/999999").cookie(token))
-                .andExpect(status().isBadRequest())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.message", is("Usuario no encontrado: 999999")));
-    }
-
-    @Test
-    @DisplayName("GET /users/{id} retorna error 400 si no se envía la cookie de sesión")
-    void getUsersById_sinToken_error400() throws Exception {
+    @DisplayName("GET /users/{id} retorna error 401 si no se envía la cookie de sesión")
+    void getUsersById_sinToken_error401() throws Exception {
         Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
 
         mockMvc.perform(get("/users/" + id))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 

@@ -84,26 +84,6 @@ class JpaRetweetRepositoryTest {
     }
 
     @Test
-    void shouldStillShowARetweetAsUnavailableAfterItsOriginIsSoftDeleted() {
-        // Set up
-        Retweet retweet = new Retweet(agomez, jperezTweet);
-        em.getTransaction().begin();
-        em.persist(retweet);
-        em.getTransaction().commit();
-
-        // Desarrollo: se borra el tweet de origen (no el retweet en sí)
-        em.getTransaction().begin();
-        jperezTweet.markAsDeleted();
-        em.getTransaction().commit();
-
-        // Evaluación: el retweet sigue existiendo, mostrando el origen como no disponible
-        var retweets = repository.findByAuthorId(agomez.getId());
-        assertThat(retweets).hasSize(1);
-        assertThat(retweets.get(0).originalContent()).isEqualTo("Publicación no disponible");
-        assertThat(retweets.get(0).originalAuthorUsername()).isEqualTo("jperez");
-    }
-
-    @Test
     void shouldReturnOnlyTheAuthorsRetweets() {
         // Set up
         Retweet retweet = new Retweet(agomez, jperezTweet);
@@ -119,5 +99,6 @@ class JpaRetweetRepositoryTest {
         assertThat(retweets.get(0).authorUsername()).isEqualTo("agomez");
         assertThat(retweets.get(0).originalAuthorUsername()).isEqualTo("jperez");
         assertThat(retweets.get(0).originalTweetId()).isEqualTo(jperezTweet.getId());
+        assertThat(retweets.get(0).originalDeleted()).isFalse();
     }
 }

@@ -27,4 +27,8 @@ public interface TweetRepository {
     List<OriginalTweetInfo> findByAuthorId(Integer userId);
 
     List<TweetInfo> findTimelineByAuthorId(Integer userId);
+
+    // Tweets y retweets de userId y de los usuarios que sigue, del más nuevo al más viejo.
+    // Un retweet cuyo origen fue borrado igual aparece (con el origen como no disponible).
+    List<TweetInfo> findFeedByFollowerId(Integer userId);
 }

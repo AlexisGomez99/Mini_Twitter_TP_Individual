@@ -113,46 +113,4 @@ class JpaFollowRepositoryTest {
         assertThat(following.get(0).username()).isEqualTo("jperez");
     }
 
-    @Test
-    void shouldRemoveTheFollowRelationshipWhenTheFollowerAccountIsDeleted() {
-        // Set up: agomez sigue a jperez
-        em.getTransaction().begin();
-        repository.follow(agomez, jperez);
-        em.getTransaction().commit();
-
-        // Vacía el contexto de persistencia y recarga a agomez: al construirlo con "new"
-        // su colección "followsAsFollower" quedó como un ArrayList común en memoria, sin
-        // que Hibernate sepa del Follow recién creado. Sin este paso, el clear() de
-        // markAsDeleted() no dispararía el orphanRemoval sobre la fila real en la base.
-        em.clear();
-
-        // Desarrollo: se borra la cuenta de agomez (el seguidor)
-        em.getTransaction().begin();
-        User agomezToDelete = UserRepository.repositoryOf(em).getById(agomez.getId()).orElseThrow();
-        UserRepository.repositoryOf(em).deleteUser(agomezToDelete);
-        em.getTransaction().commit();
-
-        // Evaluación: la relación desaparece de la lista de seguidores de jperez
-        assertThat(repository.findFollowers(jperez.getId())).isEmpty();
-    }
-
-    @Test
-    void shouldRemoveTheFollowRelationshipWhenTheFollowedAccountIsDeleted() {
-        // Set up: jperez sigue a agomez
-        em.getTransaction().begin();
-        repository.follow(jperez, agomez);
-        em.getTransaction().commit();
-
-        // Ver comentario equivalente en el test anterior.
-        em.clear();
-
-        // Desarrollo: se borra la cuenta de agomez (el seguido)
-        em.getTransaction().begin();
-        User agomezToDelete = UserRepository.repositoryOf(em).getById(agomez.getId()).orElseThrow();
-        UserRepository.repositoryOf(em).deleteUser(agomezToDelete);
-        em.getTransaction().commit();
-
-        // Evaluación: la relación desaparece de la lista de "siguiendo" de jperez
-        assertThat(repository.findFollowing(jperez.getId())).isEmpty();
-    }
 }

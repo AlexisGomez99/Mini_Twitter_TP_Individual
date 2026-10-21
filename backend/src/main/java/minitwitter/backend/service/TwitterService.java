@@ -4,6 +4,8 @@ import jakarta.persistence.EntityManagerFactory;
 import minitwitter.backend.dto.*;
 import minitwitter.backend.model.*;
 import minitwitter.backend.repositorios.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import static minitwitter.backend.model.auth.Notary.notary;
 
 import java.util.List;
@@ -20,7 +22,8 @@ public class TwitterService {
     public String login(String username, String password) {
         return emf.callInTransaction(em -> {
             var usuarioOptional = UserRepository.repositoryOf(em).fetchForUsernameAndPassword(username, password);
-            var usuario = usuarioOptional.orElseThrow(() -> new RuntimeException("Usuario o contraseña incorrectos"));
+            var usuario = usuarioOptional.orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos"));
             return notary().generateTokenFor(usuario.identificador());
         });
     }
@@ -29,7 +32,7 @@ public class TwitterService {
         try {
             return notary().verifyToken(token);
         } catch (Exception e) {
-            throw new RuntimeException("Token inválido", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido", e);
         }
     }
 
@@ -93,13 +96,20 @@ public class TwitterService {
         });
     }
 
-    public void deleteTweet(Integer tweetId) {
+    // userId es quien pide el borrado: solo el autor puede eliminar su tweet.
+    public void deleteTweet(Integer userId, Integer tweetId) {
         emf.runInTransaction(em -> {
             var repository = TweetRepository.repositoryOf(em);
             repository.findById(tweetId)
                     .filter(tweet -> tweet instanceof OriginalTweet)
                     .map(tweet -> (OriginalTweet) tweet)
-                    .ifPresent(repository::delete);
+                    .ifPresent(tweet -> {
+                        if (!tweet.getAuthor().getId().equals(userId)) {
+                            throw new ResponseStatusException(
+                                    HttpStatus.FORBIDDEN, "No podés eliminar un tweet de otra persona");
+                        }
+                        repository.delete(tweet);
+                    });
         });
     }
 
@@ -109,6 +119,10 @@ public class TwitterService {
 
     public List<TweetInfo> getTimelineForUserId(Integer userId) {
         return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findTimelineByAuthorId(userId));
+    }
+
+    public List<TweetInfo> getFeedForUserId(Integer userId) {
+        return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findFeedByFollowerId(userId));
     }
 
     // --- Retweets ---
@@ -153,7 +167,12 @@ public class TwitterService {
             var followed = userRepository.getById(followedId)
                     .filter(user -> !user.isDeleted())
                     .orElseThrow(() -> new DomainException("Usuario no encontrado: " + followedId));
-            FollowRepository.repositoryOf(em).follow(follower, followed);
+            var followRepository = FollowRepository.repositoryOf(em);
+            // Seguir a alguien que ya se sigue no hace nada (igual que unfollow), en vez de
+            // chocar contra la restricción de unicidad de la base y devolver su mensaje de error.
+            if (!followRepository.isFollowing(followerId, followedId)) {
+                followRepository.follow(follower, followed);
+            }
         });
     }
 

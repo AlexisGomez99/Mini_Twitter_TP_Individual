@@ -52,4 +52,17 @@ public class JpaTweetRepository implements TweetRepository {
         query.setParameter("userId", userId);
         return query.getResultList().stream().map(Tweet::toInfo).toList();
     }
+
+    @Override
+    public List<TweetInfo> findFeedByFollowerId(Integer userId) {
+        var query = em.createQuery(
+                "select t from Tweet t "
+                        + "where t.deleted = false "
+                        + "and (t.author.id = :userId or t.author.id in ("
+                        + "select f.followed.id from Follow f where f.follower.id = :userId)) "
+                        + "order by t.createdAt desc",
+                Tweet.class);
+        query.setParameter("userId", userId);
+        return query.getResultList().stream().map(Tweet::toInfo).toList();
+    }
 }

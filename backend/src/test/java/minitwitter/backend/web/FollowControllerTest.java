@@ -127,10 +127,10 @@ class FollowControllerTest {
     }
 
     @Test
-    @DisplayName("GET /follows/following retorna error 400 si no se envía la cookie de sesión")
-    void getFollowsFollowing_sinToken_error400() throws Exception {
+    @DisplayName("GET /follows/following retorna error 401 si no se envía la cookie de sesión")
+    void getFollowsFollowing_sinToken_error401() throws Exception {
         mockMvc.perform(get("/follows/following").param("userId", agomezId.toString()))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("No autenticado")));
     }
 }
