@@ -25,37 +25,37 @@ class RetweetControllerTest {
 
     @Autowired
     private EntityManagerFactory emf;
-    private TwitterService twitterService;
+    private TwitterService servicioTwitter;
 
     @Autowired
     private MockMvc mockMvc;
 
-    private Integer agomezId;
-    private Integer jperezId;
-    private Integer jperezTweetId;
+    private Integer idAgomez;
+    private Integer idJperez;
+    private Integer idTweetJperez;
     private Cookie token;
 
     @BeforeEach
-    void setUp() {
+    void prepararDatos() {
         emf.getSchemaManager().truncate();
 
-        twitterService = new TwitterService(emf);
-        twitterService.addUser("agomez", "password123");
-        twitterService.addUser("jperez", "password456");
+        servicioTwitter = new TwitterService(emf);
+        servicioTwitter.agregarUsuario("agomez", "password123");
+        servicioTwitter.agregarUsuario("jperez", "password456");
 
-        agomezId = twitterService.getUserByUsername("agomez").orElseThrow().id();
-        jperezId = twitterService.getUserByUsername("jperez").orElseThrow().id();
+        idAgomez = servicioTwitter.obtenerUsuarioPorNombreUsuario("agomez").orElseThrow().id();
+        idJperez = servicioTwitter.obtenerUsuarioPorNombreUsuario("jperez").orElseThrow().id();
 
-        twitterService.createTweet(jperezId, "Tweet de Luis");
-        jperezTweetId = twitterService.listTweetsForUserId(jperezId).get(0).id();
+        servicioTwitter.crearTweet(idJperez, "Tweet de Luis");
+        idTweetJperez = servicioTwitter.listarTweetsDelUsuario(idJperez, 0).content().get(0).id();
 
-        token = new Cookie("token", twitterService.login("agomez", "password123"));
+        token = new Cookie("token", servicioTwitter.iniciarSesion("agomez", "password123"));
     }
 
     @Test
     @DisplayName("POST /retweets agrega un retweet válido correctamente")
     void postRetweets_retweetValido_ok() throws Exception {
-        String json = "{\"userId\":" + agomezId + ",\"originTweetId\":" + jperezTweetId + "}";
+        String json = "{\"userId\":" + idAgomez + ",\"originTweetId\":" + idTweetJperez + "}";
 
         mockMvc.perform(post("/retweets")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,9 +67,9 @@ class RetweetControllerTest {
     @Test
     @DisplayName("GET /retweets devuelve solo los retweets del usuario")
     void getRetweets_soloDelUsuario_ok() throws Exception {
-        twitterService.createRetweet(agomezId, jperezTweetId);
+        servicioTwitter.crearRetweet(idAgomez, idTweetJperez);
 
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
+        mockMvc.perform(get("/retweets").param("userId", idAgomez.toString()).cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].authorUsername", is("agomez")))
@@ -80,20 +80,20 @@ class RetweetControllerTest {
     @Test
     @DisplayName("DELETE /retweets/{id} borra el retweet correctamente")
     void deleteRetweets_retweetExistente_ok() throws Exception {
-        twitterService.createRetweet(agomezId, jperezTweetId);
-        Integer retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
+        servicioTwitter.crearRetweet(idAgomez, idTweetJperez);
+        Integer idRetweet = servicioTwitter.listarRetweetsDelUsuario(idAgomez).get(0).id();
 
-        mockMvc.perform(delete("/retweets/" + retweetId).cookie(token))
+        mockMvc.perform(delete("/retweets/" + idRetweet).cookie(token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()).cookie(token))
+        mockMvc.perform(get("/retweets").param("userId", idAgomez.toString()).cookie(token))
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
     @DisplayName("GET /retweets retorna error 401 si no se envía la cookie de sesión")
     void getRetweets_sinToken_error401() throws Exception {
-        mockMvc.perform(get("/retweets").param("userId", agomezId.toString()))
+        mockMvc.perform(get("/retweets").param("userId", idAgomez.toString()))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message", is("No autenticado")));
     }

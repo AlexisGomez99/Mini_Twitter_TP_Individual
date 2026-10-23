@@ -9,41 +9,39 @@ import java.util.List;
 
 @RestController
 public class FollowController {
-    private final TwitterService twitterService;
+    private final TwitterService servicioTwitter;
 
-    public FollowController(TwitterService twitterService) {
-        this.twitterService = twitterService;
+    public FollowController(TwitterService servicioTwitter) {
+        this.servicioTwitter = servicioTwitter;
     }
 
     @PostMapping("/follows")
-    public void follow(@RequestBody FollowRequest followRequest, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.follow(followRequest.followerId(), followRequest.followedId());
+    public void seguir(@RequestBody FollowRequest pedidoSeguir, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.seguir(pedidoSeguir.followerId(), pedidoSeguir.followedId());
     }
 
     @DeleteMapping("/follows")
-    public void unfollow(@RequestParam Integer followerId, @RequestParam Integer followedId,
-                          @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.unfollow(followerId, followedId);
+    public void dejarDeSeguir(@RequestParam("followerId") Integer idSeguidor, @RequestParam("followedId") Integer idSeguido, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.dejarDeSeguir(idSeguidor, idSeguido);
     }
 
     @GetMapping("/follows/is-following")
-    public boolean isFollowing(@RequestParam Integer followerId, @RequestParam Integer followedId,
-                                @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.isFollowing(followerId, followedId);
+    public boolean estaSiguiendo(@RequestParam("followerId") Integer idSeguidor, @RequestParam("followedId") Integer idSeguido, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.estaSiguiendo(idSeguidor, idSeguido);
     }
 
     @GetMapping("/follows/followers")
-    public List<UserInfo> followers(@RequestParam Integer userId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.getFollowers(userId);
+    public List<UserInfo> seguidores(@RequestParam("userId") Integer idUsuario, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.obtenerSeguidores(idUsuario);
     }
 
     @GetMapping("/follows/following")
-    public List<UserInfo> following(@RequestParam Integer userId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.getFollowing(userId);
+    public List<UserInfo> seguidos(@RequestParam("userId") Integer idUsuario, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.obtenerSeguidos(idUsuario);
     }
 }

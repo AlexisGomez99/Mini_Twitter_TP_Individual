@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 
 public class TwitterService {
+    private static final int TAMANIO_PAGINA_FEED = 20;
+    private static final int TAMANIO_PAGINA_TWEETS = 10;
+
     private final EntityManagerFactory emf;
 
     public TwitterService(EntityManagerFactory emf) {
@@ -19,16 +22,17 @@ public class TwitterService {
     }
 
     // --- AUTH ---
-    public String login(String username, String password) {
+    public String iniciarSesion(String nombreUsuario, String contrasenia) {
         return emf.callInTransaction(em -> {
-            var usuarioOptional = UserRepository.repositoryOf(em).fetchForUsernameAndPassword(username, password);
+            var usuarioOptional = UserRepository.repositorioDe(em)
+                    .obtenerPorNombreUsuarioYContrasenia(nombreUsuario, contrasenia);
             var usuario = usuarioOptional.orElseThrow(() ->
                     new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos"));
             return notary().generateTokenFor(usuario.identificador());
         });
     }
 
-    public Integer verificarTokenAndGetIdUsuario(String token) {
+    public Integer verificarTokenYObtenerIdUsuario(String token) {
         try {
             return notary().verifyToken(token);
         } catch (Exception e) {
@@ -36,169 +40,177 @@ public class TwitterService {
         }
     }
 
-    public Integer registrarUsuario(String username, String password) {
+    public Integer registrarUsuario(String nombreUsuario, String contrasenia) {
         return emf.callInTransaction(em -> {
-            var usuarioOptional = UserRepository.repositoryOf(em).getForUsername(username);
+            var usuarioOptional = UserRepository.repositorioDe(em).obtenerPorNombreUsuario(nombreUsuario);
             usuarioOptional.ifPresent(u -> {
                 throw new RuntimeException("El nombre de usuario ya existe");
             });
-            var usuario = new User(username, password);
+            var usuario = new User(nombreUsuario, contrasenia);
             em.persist(usuario);
             return usuario.identificador();
         });
     }
     // --- Usuarios ---
 
-    public void addUser(String username, String password) {
+    public void agregarUsuario(String nombreUsuario, String contrasenia) {
         emf.runInTransaction(em -> {
-            var user = new User(username, password);
-            UserRepository.repositoryOf(em).addUser(user);
+            var usuario = new User(nombreUsuario, contrasenia);
+            UserRepository.repositorioDe(em).agregarUsuario(usuario);
         });
     }
 
-    public Optional<UserInfo> getUserById(Integer id) {
+    public Optional<UserInfo> obtenerUsuarioPorId(Integer id) {
         return emf.callInTransaction(em ->
-                UserRepository.repositoryOf(em).getById(id)
-                        .filter(user -> !user.isDeleted())
+                UserRepository.repositorioDe(em).obtenerPorId(id)
+                        .filter(usuario -> !usuario.isDeleted())
                         .map(User::toInfo)
         );
     }
 
     // Caso específico donde sí hace falta buscar por username: por ejemplo, un login,
     // donde todavía no se conoce el id del usuario.
-    public Optional<UserInfo> getUserByUsername(String username) {
+    public Optional<UserInfo> obtenerUsuarioPorNombreUsuario(String nombreUsuario) {
         return emf.callInTransaction(em ->
-                UserRepository.repositoryOf(em).getForUsername(username)
-                        .filter(user -> !user.isDeleted())
+                UserRepository.repositorioDe(em).obtenerPorNombreUsuario(nombreUsuario)
+                        .filter(usuario -> !usuario.isDeleted())
                         .map(User::toInfo)
         );
     }
 
-    public void deleteUser(Integer id) {
+    public void eliminarUsuario(Integer id) {
         emf.runInTransaction(em ->
-                UserRepository.repositoryOf(em).getById(id)
-                        .ifPresent(user -> UserRepository.repositoryOf(em).deleteUser(user))
+                UserRepository.repositorioDe(em).obtenerPorId(id)
+                        .ifPresent(usuario -> UserRepository.repositorioDe(em).eliminarUsuario(usuario))
         );
     }
 
-    public List<UserInfo> listUsers() {
-        return emf.callInTransaction(em -> UserRepository.repositoryOf(em).listUsers());
+    public List<UserInfo> listarUsuarios() {
+        return emf.callInTransaction(em -> UserRepository.repositorioDe(em).listarUsuarios());
     }
 
     // --- Tweets ---
 
-    public void createTweet(Integer userId, String content) {
+    public void crearTweet(Integer idUsuario, String contenido) {
         emf.runInTransaction(em -> {
-            var author = UserRepository.repositoryOf(em).getById(userId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + userId));
-            TweetRepository.repositoryOf(em).save(new OriginalTweet(author, content));
+            var autor = UserRepository.repositorioDe(em).obtenerPorId(idUsuario)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idUsuario));
+            TweetRepository.repositorioDe(em).guardar(new OriginalTweet(autor, contenido));
         });
     }
 
-    // userId es quien pide el borrado: solo el autor puede eliminar su tweet.
-    public void deleteTweet(Integer userId, Integer tweetId) {
+    // idUsuario es quien pide el borrado: solo el autor puede eliminar su tweet.
+    public void eliminarTweet(Integer idUsuario, Integer idTweet) {
         emf.runInTransaction(em -> {
-            var repository = TweetRepository.repositoryOf(em);
-            repository.findById(tweetId)
+            var repositorio = TweetRepository.repositorioDe(em);
+            repositorio.buscarPorId(idTweet)
                     .filter(tweet -> tweet instanceof OriginalTweet)
                     .map(tweet -> (OriginalTweet) tweet)
                     .ifPresent(tweet -> {
-                        if (!tweet.getAuthor().getId().equals(userId)) {
+                        if (!tweet.getAuthor().getId().equals(idUsuario)) {
                             throw new ResponseStatusException(
                                     HttpStatus.FORBIDDEN, "No podés eliminar un tweet de otra persona");
                         }
-                        repository.delete(tweet);
+                        repositorio.eliminar(tweet);
                     });
         });
     }
 
-    public List<OriginalTweetInfo> listTweetsForUserId(Integer userId) {
-        return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findByAuthorId(userId));
+    // Los tweets originales de un usuario
+    public PageResponse<OriginalTweetInfo> listarTweetsDelUsuario(Integer idUsuario, int pagina) {
+        validarPagina(pagina);
+        return emf.callInTransaction(em ->
+                TweetRepository.repositorioDe(em).buscarPorIdAutor(idUsuario, pagina, TAMANIO_PAGINA_TWEETS));
     }
 
-    public List<TweetInfo> getTimelineForUserId(Integer userId) {
-        return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findTimelineByAuthorId(userId));
+    // El feed de inicio
+    public PageResponse<TweetInfo> obtenerFeedDelUsuario(Integer idUsuario, int pagina) {
+        validarPagina(pagina);
+        return emf.callInTransaction(em ->
+                TweetRepository.repositorioDe(em).buscarFeedPorIdSeguidor(idUsuario, pagina, TAMANIO_PAGINA_FEED));
     }
 
-    public List<TweetInfo> getFeedForUserId(Integer userId) {
-        return emf.callInTransaction(em -> TweetRepository.repositoryOf(em).findFeedByFollowerId(userId));
+    private void validarPagina(int pagina) {
+        if (pagina < 0) {
+            throw new DomainException("La página no puede ser negativa");
+        }
     }
 
     // --- Retweets ---
 
-    public void createRetweet(Integer userId, Integer originTweetId) {
+    public void crearRetweet(Integer idUsuario, Integer idTweetOrigen) {
         emf.runInTransaction(em -> {
-            var author = UserRepository.repositoryOf(em).getById(userId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + userId));
+            var autor = UserRepository.repositorioDe(em).obtenerPorId(idUsuario)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idUsuario));
             // No se puede crear un retweet nuevo de un tweet que ya no está disponible,
-            // aunque sí se puede seguir consultando uno ya existente (ver findById).
-            var origin = TweetRepository.repositoryOf(em).findById(originTweetId)
+            // aunque sí se puede seguir consultando uno ya existente (ver buscarPorId).
+            var origen = TweetRepository.repositorioDe(em).buscarPorId(idTweetOrigen)
                     .filter(tweet -> !tweet.isDeleted())
-                    .orElseThrow(() -> new DomainException("Tweet no encontrado: " + originTweetId));
-            RetweetRepository.repositoryOf(em).save(new Retweet(author, origin));
+                    .orElseThrow(() -> new DomainException("Tweet no encontrado: " + idTweetOrigen));
+            RetweetRepository.repositorioDe(em).guardar(new Retweet(autor, origen));
         });
     }
 
-    public void deleteRetweet(Integer retweetId) {
+    public void eliminarRetweet(Integer idRetweet) {
         emf.runInTransaction(em -> {
             // Se busca con TweetRepository (la clase base) porque un retweet es un Tweet;
-            // TweetRepository.findById ya está pensado para devolver cualquier subtipo.
-            TweetRepository.repositoryOf(em).findById(retweetId)
+            // TweetRepository.buscarPorId ya está pensado para devolver cualquier subtipo.
+            TweetRepository.repositorioDe(em).buscarPorId(idRetweet)
                     .filter(tweet -> tweet instanceof Retweet)
                     .map(tweet -> (Retweet) tweet)
-                    .ifPresent(RetweetRepository.repositoryOf(em)::delete);
+                    .ifPresent(RetweetRepository.repositorioDe(em)::eliminar);
         });
     }
 
-    public List<RetweetInfo> listRetweetsForUserId(Integer userId) {
-        return emf.callInTransaction(em -> RetweetRepository.repositoryOf(em).findByAuthorId(userId));
+    public List<RetweetInfo> listarRetweetsDelUsuario(Integer idUsuario) {
+        return emf.callInTransaction(em -> RetweetRepository.repositorioDe(em).buscarPorIdAutor(idUsuario));
     }
 
     // --- Follows ---
 
-    public void follow(Integer followerId, Integer followedId) {
+    public void seguir(Integer idSeguidor, Integer idSeguido) {
         emf.runInTransaction(em -> {
-            var userRepository = UserRepository.repositoryOf(em);
-            var follower = userRepository.getById(followerId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + followerId));
-            var followed = userRepository.getById(followedId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + followedId));
-            var followRepository = FollowRepository.repositoryOf(em);
-            // Seguir a alguien que ya se sigue no hace nada (igual que unfollow), en vez de
+            var repositorioUsuarios = UserRepository.repositorioDe(em);
+            var seguidor = repositorioUsuarios.obtenerPorId(idSeguidor)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguidor));
+            var seguido = repositorioUsuarios.obtenerPorId(idSeguido)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguido));
+            var repositorioFollows = FollowRepository.repositorioDe(em);
+            // Seguir a alguien que ya se sigue no hace nada (igual que dejarDeSeguir), en vez de
             // chocar contra la restricción de unicidad de la base y devolver su mensaje de error.
-            if (!followRepository.isFollowing(followerId, followedId)) {
-                followRepository.follow(follower, followed);
+            if (!repositorioFollows.estaSiguiendo(idSeguidor, idSeguido)) {
+                repositorioFollows.seguir(seguidor, seguido);
             }
         });
     }
 
-    public void unfollow(Integer followerId, Integer followedId) {
+    public void dejarDeSeguir(Integer idSeguidor, Integer idSeguido) {
         emf.runInTransaction(em -> {
-            var userRepository = UserRepository.repositoryOf(em);
-            var follower = userRepository.getById(followerId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + followerId));
-            var followed = userRepository.getById(followedId)
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + followedId));
-            FollowRepository.repositoryOf(em).unfollow(follower, followed);
+            var repositorioUsuarios = UserRepository.repositorioDe(em);
+            var seguidor = repositorioUsuarios.obtenerPorId(idSeguidor)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguidor));
+            var seguido = repositorioUsuarios.obtenerPorId(idSeguido)
+                    .filter(usuario -> !usuario.isDeleted())
+                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguido));
+            FollowRepository.repositorioDe(em).dejarDeSeguir(seguidor, seguido);
         });
     }
 
-    public boolean isFollowing(Integer followerId, Integer followedId) {
+    public boolean estaSiguiendo(Integer idSeguidor, Integer idSeguido) {
         return emf.callInTransaction(em ->
-                FollowRepository.repositoryOf(em).isFollowing(followerId, followedId));
+                FollowRepository.repositorioDe(em).estaSiguiendo(idSeguidor, idSeguido));
     }
 
-    public List<UserInfo> getFollowers(Integer userId) {
-        return emf.callInTransaction(em -> FollowRepository.repositoryOf(em).findFollowers(userId));
+    public List<UserInfo> obtenerSeguidores(Integer idUsuario) {
+        return emf.callInTransaction(em -> FollowRepository.repositorioDe(em).buscarSeguidores(idUsuario));
     }
 
-    public List<UserInfo> getFollowing(Integer userId) {
-        return emf.callInTransaction(em -> FollowRepository.repositoryOf(em).findFollowing(userId));
+    public List<UserInfo> obtenerSeguidos(Integer idUsuario) {
+        return emf.callInTransaction(em -> FollowRepository.repositorioDe(em).buscarSeguidos(idUsuario));
     }
 }

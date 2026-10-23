@@ -9,27 +9,27 @@ import java.util.List;
 
 @RestController
 public class RetweetController {
-    private final TwitterService twitterService;
+    private final TwitterService servicioTwitter;
 
-    public RetweetController(TwitterService twitterService) {
-        this.twitterService = twitterService;
+    public RetweetController(TwitterService servicioTwitter) {
+        this.servicioTwitter = servicioTwitter;
     }
 
     @PostMapping("/retweets")
-    public void createRetweet(@RequestBody NewRetweetRequest newRetweet, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.createRetweet(newRetweet.userId(), newRetweet.originTweetId());
+    public void crearRetweet(@RequestBody NewRetweetRequest nuevoRetweet, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.crearRetweet(nuevoRetweet.userId(), nuevoRetweet.originTweetId());
     }
 
     @GetMapping("/retweets")
-    public List<RetweetInfo> retweetsForUserId(@RequestParam Integer userId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.listRetweetsForUserId(userId);
+    public List<RetweetInfo> retweetsDelUsuario(@RequestParam("userId") Integer idUsuario, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.listarRetweetsDelUsuario(idUsuario);
     }
 
     @DeleteMapping("/retweets/{retweetId}")
-    public void deleteRetweet(@PathVariable Integer retweetId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.deleteRetweet(retweetId);
+    public void eliminarRetweet(@PathVariable("retweetId") Integer idRetweet, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.eliminarRetweet(idRetweet);
     }
 }

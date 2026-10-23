@@ -1,84 +1,84 @@
 import { useEffect, useState } from "react";
 import PageHeader from "../layout/PageHeader.jsx";
 import UserItem from "./UserItem.jsx";
-import apiService from "../../services/apiService.js";
-import { useAuth } from "../../context/AuthContext.js";
+import servicioApi from "../../services/apiService.js";
+import { useAutenticacion } from "../../context/AuthContext.js";
 
 export default function SearchUsers(){
-    const { user, endSession } = useAuth();
-    const [users, setUsers] = useState([]);
+    const { usuario, terminarSesion } = useAutenticacion();
+    const [usuarios, setUsuarios] = useState([]);
     // Ids de las personas a las que yo sigo: define si cada resultado muestra "Seguir" o "Dejar de seguir".
-    const [followingIds, setFollowingIds] = useState(new Set());
-    const [query, setQuery] = useState("");
-    const [loading, setLoading] = useState(true);
+    const [idsSeguidos, setIdsSeguidos] = useState(new Set());
+    const [busqueda, setBusqueda] = useState("");
+    const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
-    const [actionError, setActionError] = useState(null);
-    const [busyId, setBusyId] = useState(null);
+    const [errorDeAccion, setErrorDeAccion] = useState(null);
+    const [idOcupado, setIdOcupado] = useState(null);
 
     // Se traen todos los usuarios una sola vez y se filtra en el front mientras se escribe:
     // el backend solo busca por nombre exacto (GET /users?username=).
     useEffect(() => {
-        let ignore = false;
-        Promise.all([apiService.listUsers(), apiService.getFollowing(user.id)])
-            .then(([usersList, followingList]) => {
-                if (ignore) return;
-                setUsers(usersList);
-                setFollowingIds(new Set(followingList.map((followed) => followed.id)));
-                setLoading(false);
+        let ignorar = false;
+        Promise.all([servicioApi.listarUsuarios(), servicioApi.obtenerSeguidos(usuario.id)])
+            .then(([listaUsuarios, listaSeguidos]) => {
+                if (ignorar) return;
+                setUsuarios(listaUsuarios);
+                setIdsSeguidos(new Set(listaSeguidos.map((seguido) => seguido.id)));
+                setCargando(false);
             })
             .catch((e) => {
-                if (ignore) return;
-                if (e.status === 401) endSession();
+                if (ignorar) return;
+                if (e.estado === 401) terminarSesion();
                 else setError(e.message);
-                setLoading(false);
+                setCargando(false);
             });
-        return () => { ignore = true; };
-    }, [endSession, user.id]);
+        return () => { ignorar = true; };
+    }, [terminarSesion, usuario.id]);
 
-    async function handleToggleFollow(found) {
-        const isFollowing = followingIds.has(found.id);
-        setActionError(null);
-        setBusyId(found.id);
+    async function manejarAlternarSeguir(encontrado) {
+        const yaLoSigo = idsSeguidos.has(encontrado.id);
+        setErrorDeAccion(null);
+        setIdOcupado(encontrado.id);
         try {
-            if (isFollowing) await apiService.unfollow(user.id, found.id);
-            else await apiService.follow(user.id, found.id);
-            setFollowingIds((ids) => {
-                const next = new Set(ids);
-                if (isFollowing) next.delete(found.id);
-                else next.add(found.id);
-                return next;
+            if (yaLoSigo) await servicioApi.dejarDeSeguir(usuario.id, encontrado.id);
+            else await servicioApi.seguir(usuario.id, encontrado.id);
+            setIdsSeguidos((ids) => {
+                const siguiente = new Set(ids);
+                if (yaLoSigo) siguiente.delete(encontrado.id);
+                else siguiente.add(encontrado.id);
+                return siguiente;
             });
         } catch (e) {
-            if (e.status === 401) endSession();
-            else setActionError(e.message);
+            if (e.estado === 401) terminarSesion();
+            else setErrorDeAccion(e.message);
         } finally {
-            setBusyId(null);
+            setIdOcupado(null);
         }
     }
 
-    const term = query.trim().toLowerCase();
+    const termino = busqueda.trim().toLowerCase();
     // No se ofrece seguirse a uno mismo.
-    const results = term === ""
+    const resultados = termino === ""
         ? []
-        : users.filter((found) => found.id !== user.id && found.username.toLowerCase().includes(term));
+        : usuarios.filter((encontrado) => encontrado.id !== usuario.id && encontrado.username.toLowerCase().includes(termino));
 
-    let body;
-    if (loading) body = <p className="feed-message">Cargando...</p>;
-    else if (error) body = <p className="feed-message feed-error" role="alert">{error}</p>;
-    else if (term === "") body = <p className="feed-message">Escribí un nombre para buscar usuarios.</p>;
-    else if (results.length === 0) body = <p className="feed-message">No se encontraron usuarios para "{query.trim()}".</p>;
-    else body = (
+    let cuerpo;
+    if (cargando) cuerpo = <p className="feed-message">Cargando...</p>;
+    else if (error) cuerpo = <p className="feed-message feed-error" role="alert">{error}</p>;
+    else if (termino === "") cuerpo = <p className="feed-message">Escribí un nombre para buscar usuarios.</p>;
+    else if (resultados.length === 0) cuerpo = <p className="feed-message">No se encontraron usuarios para "{busqueda.trim()}".</p>;
+    else cuerpo = (
         <>
-            {actionError && <p className="feed-message feed-error" role="alert">{actionError}</p>}
+            {errorDeAccion && <p className="feed-message feed-error" role="alert">{errorDeAccion}</p>}
             <div className="user-list">
-                {results.map((found) => (
+                {resultados.map((encontrado) => (
                     <UserItem
-                        key={found.id}
-                        username={found.username}
-                        to={`/usuarios/${found.id}`}
-                        following={followingIds.has(found.id)}
-                        busy={busyId === found.id}
-                        onToggleFollow={() => handleToggleFollow(found)}
+                        key={encontrado.id}
+                        nombreUsuario={encontrado.username}
+                        ruta={`/usuarios/${encontrado.id}`}
+                        siguiendo={idsSeguidos.has(encontrado.id)}
+                        ocupado={idOcupado === encontrado.id}
+                        alAlternarSeguir={() => manejarAlternarSeguir(encontrado)}
                     />
                 ))}
             </div>
@@ -87,19 +87,19 @@ export default function SearchUsers(){
 
     return (
         <main className="content">
-            <PageHeader title="Seguir a"/>
+            <PageHeader titulo="Seguir a"/>
             <div className="search-box">
                 <input
                     type="search"
                     className="search-input"
                     placeholder="Buscar usuarios por nombre"
                     aria-label="Buscar usuarios por nombre"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    value={busqueda}
+                    onChange={(e) => setBusqueda(e.target.value)}
                     autoFocus
                 />
             </div>
-            {body}
+            {cuerpo}
         </main>
     )
 }

@@ -1,65 +1,65 @@
 import { useEffect, useState } from "react";
 import PageHeader from "../layout/PageHeader.jsx";
 import UserItem from "./UserItem.jsx";
-import apiService from "../../services/apiService.js";
-import { useAuth } from "../../context/AuthContext.js";
+import servicioApi from "../../services/apiService.js";
+import { useAutenticacion } from "../../context/AuthContext.js";
 
 export default function Following(){
-    const { user, endSession } = useAuth();
-    const [followedUsers, setFollowedUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { usuario, terminarSesion } = useAutenticacion();
+    const [usuariosSeguidos, setUsuariosSeguidos] = useState([]);
+    const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
-    const [actionError, setActionError] = useState(null);
-    const [busyId, setBusyId] = useState(null);
+    const [errorDeAccion, setErrorDeAccion] = useState(null);
+    const [idOcupado, setIdOcupado] = useState(null);
 
     useEffect(() => {
-        let ignore = false;
-        apiService.getFollowing(user.id)
-            .then((list) => {
-                if (ignore) return;
-                setFollowedUsers(list);
-                setLoading(false);
+        let ignorar = false;
+        servicioApi.obtenerSeguidos(usuario.id)
+            .then((lista) => {
+                if (ignorar) return;
+                setUsuariosSeguidos(lista);
+                setCargando(false);
             })
             .catch((e) => {
-                if (ignore) return;
-                if (e.status === 401) endSession();
+                if (ignorar) return;
+                if (e.estado === 401) terminarSesion();
                 else setError(e.message);
-                setLoading(false);
+                setCargando(false);
             });
-        return () => { ignore = true; };
-    }, [endSession, user.id]);
+        return () => { ignorar = true; };
+    }, [terminarSesion, usuario.id]);
 
-    async function handleUnfollow(followed) {
-        setActionError(null);
-        setBusyId(followed.id);
+    async function manejarDejarDeSeguir(seguido) {
+        setErrorDeAccion(null);
+        setIdOcupado(seguido.id);
         try {
-            await apiService.unfollow(user.id, followed.id);
+            await servicioApi.dejarDeSeguir(usuario.id, seguido.id);
             // Ya no lo sigo: sale de la lista.
-            setFollowedUsers((list) => list.filter((item) => item.id !== followed.id));
+            setUsuariosSeguidos((lista) => lista.filter((item) => item.id !== seguido.id));
         } catch (e) {
-            if (e.status === 401) endSession();
-            else setActionError(e.message);
+            if (e.estado === 401) terminarSesion();
+            else setErrorDeAccion(e.message);
         } finally {
-            setBusyId(null);
+            setIdOcupado(null);
         }
     }
 
-    let body;
-    if (loading) body = <p className="feed-message">Cargando...</p>;
-    else if (error) body = <p className="feed-message feed-error" role="alert">{error}</p>;
-    else if (followedUsers.length === 0) body = <p className="feed-message">Todavía no seguís a nadie.</p>;
-    else body = (
+    let cuerpo;
+    if (cargando) cuerpo = <p className="feed-message">Cargando...</p>;
+    else if (error) cuerpo = <p className="feed-message feed-error" role="alert">{error}</p>;
+    else if (usuariosSeguidos.length === 0) cuerpo = <p className="feed-message">Todavía no seguís a nadie.</p>;
+    else cuerpo = (
         <>
-            {actionError && <p className="feed-message feed-error" role="alert">{actionError}</p>}
+            {errorDeAccion && <p className="feed-message feed-error" role="alert">{errorDeAccion}</p>}
             <div className="user-list">
-                {followedUsers.map((followed) => (
+                {usuariosSeguidos.map((seguido) => (
                     <UserItem
-                        key={followed.id}
-                        username={followed.username}
-                        to={`/usuarios/${followed.id}`}
-                        following
-                        busy={busyId === followed.id}
-                        onToggleFollow={() => handleUnfollow(followed)}
+                        key={seguido.id}
+                        nombreUsuario={seguido.username}
+                        ruta={`/usuarios/${seguido.id}`}
+                        siguiendo
+                        ocupado={idOcupado === seguido.id}
+                        alAlternarSeguir={() => manejarDejarDeSeguir(seguido)}
                     />
                 ))}
             </div>
@@ -68,8 +68,8 @@ export default function Following(){
 
     return (
         <main className="content">
-            <PageHeader title="Seguidos"/>
-            {body}
+            <PageHeader titulo="Seguidos"/>
+            {cuerpo}
         </main>
     )
 }

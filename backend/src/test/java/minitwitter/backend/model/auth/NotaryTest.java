@@ -9,25 +9,25 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class NotaryTest {
 
     @Test
-    void shouldGenerateATokenAndVerifyItBackToTheSameUserId() {
+    void deberiaGenerarUnTokenYVerificarloDevolviendoElMismoIdDeUsuario() {
         // Set up
-        int userId = 42;
+        int idUsuario = 42;
 
         // Desarrollo
-        String token = notary().generateTokenFor(userId);
-        int verifiedUserId = notary().verifyToken(token);
+        String token = notary().generateTokenFor(idUsuario);
+        int idUsuarioVerificado = notary().verifyToken(token);
 
         // Evaluación
-        assertThat(verifiedUserId).isEqualTo(userId);
+        assertThat(idUsuarioVerificado).isEqualTo(idUsuario);
     }
 
     @Test
-    void shouldFailToVerifyAnInvalidToken() {
+    void deberiaFallarAlVerificarUnTokenInvalido() {
         // Set up
-        String invalidToken = "esto-no-es-un-jwt-valido";
+        String tokenInvalido = "esto-no-es-un-jwt-valido";
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> notary().verifyToken(invalidToken))
+        assertThatThrownBy(() -> notary().verifyToken(tokenInvalido))
                 .isInstanceOf(Exception.class);
     }
 }

@@ -7,14 +7,14 @@ import minitwitter.backend.model.Retweet;
 import java.util.List;
 
 public interface RetweetRepository {
-    static RetweetRepository repositoryOf(EntityManager em) {
+    static RetweetRepository repositorioDe(EntityManager em) {
         return new JpaRetweetRepository(em);
     }
 
-    void save(Retweet retweet);
+    void guardar(Retweet retweet);
 
-    // Soft delete: no borra la fila (ver Tweet.markAsDeleted).
-    void delete(Retweet retweet);
+    // Soft delete: no borra la fila.
+    void eliminar(Retweet retweet);
 
-    List<RetweetInfo> findByAuthorId(Integer userId);
+    List<RetweetInfo> buscarPorIdAutor(Integer idUsuario);
 }

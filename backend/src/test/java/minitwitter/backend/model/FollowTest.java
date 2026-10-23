@@ -8,58 +8,58 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class FollowTest {
 
     @Test
-    void shouldCreateAValidFollowRelationshipAndRecordTheDate() {
+    void deberiaCrearUnaRelacionDeSeguimientoValidaYRegistrarLaFecha() {
         // Set up
-        User follower = new User("agomez", "password123");
-        User followed = new User("jperez", "password456");
+        User seguidor = new User("agomez", "password123");
+        User seguido = new User("jperez", "password456");
 
         // Desarrollo
-        Follow follow = new Follow(follower, followed);
+        Follow seguir = new Follow(seguidor, seguido);
 
         // Evaluación
-        assertThat(follow.getFollower()).isEqualTo(follower);
-        assertThat(follow.getFollowed()).isEqualTo(followed);
-        assertThat(follow.getFollowedAt()).isNotNull();
+        assertThat(seguir.getFollower()).isEqualTo(seguidor);
+        assertThat(seguir.getFollowed()).isEqualTo(seguido);
+        assertThat(seguir.getFollowedAt()).isNotNull();
     }
 
     @Test
-    void shouldFailWhenAUserTriesToFollowThemself() {
+    void deberiaFallarCuandoUnUsuarioIntentaSeguirseASiMismo() {
         // Set up
-        User user = new User("agomez", "password123");
+        User usuario = new User("agomez", "password123");
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new Follow(user, user))
+        assertThatThrownBy(() -> new Follow(usuario, usuario))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("Un usuario no puede seguirse a sí mismo.");
     }
 
     @Test
-    void shouldFailWhenTheFollowerIsNull() {
+    void deberiaFallarCuandoElSeguidorEsNulo() {
         // Set up
-        User followed = new User("jperez", "password456");
+        User seguido = new User("jperez", "password456");
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new Follow(null, followed))
+        assertThatThrownBy(() -> new Follow(null, seguido))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El seguidor y el seguido son obligatorios.");
     }
 
     @Test
-    void shouldFailWhenTheFollowedIsNull() {
+    void deberiaFallarCuandoElSeguidoEsNulo() {
         // Set up
-        User follower = new User("agomez", "password123");
+        User seguidor = new User("agomez", "password123");
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new Follow(follower, null))
+        assertThatThrownBy(() -> new Follow(seguidor, null))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El seguidor y el seguido son obligatorios.");
     }

@@ -48,6 +48,9 @@ public class User {
 
     public User(String username, String password) {
         setUsername(username);
+        if (password == null || password.isBlank()) {
+            throw new DomainException("La contraseña es obligatoria.");
+        }
         //encriptar antes de guardar
         this.password = password;
         this.createdAt = LocalDateTime.now();

@@ -10,101 +10,101 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class TweetTest {
 
     @Test
-    void shouldCreateAValidOriginalTweet() {
+    void deberiaCrearUnTweetOriginalValido() {
         // Set up
-        User author = new User("agomez", "password123");
-        String content = "Este es mi primer tweet";
+        User autor = new User("agomez", "password123");
+        String contenido = "Este es mi primer tweet";
 
         // Desarrollo
-        OriginalTweet tweet = new OriginalTweet(author, content);
+        OriginalTweet tweet = new OriginalTweet(autor, contenido);
 
         // Evaluación
-        assertThat(tweet.getAuthor()).isEqualTo(author);
-        assertThat(tweet.getContent()).isEqualTo(content);
+        assertThat(tweet.getAuthor()).isEqualTo(autor);
+        assertThat(tweet.getContent()).isEqualTo(contenido);
         assertThat(tweet.getCreatedAt()).isNotNull();
     }
 
     @Test
-    void shouldFailWhenCreatingATweetWithoutText() {
+    void deberiaFallarAlCrearUnTweetSinTexto() {
         // Set up
-        User author = new User("agomez", "password123");
-        String content = "";
+        User autor = new User("agomez", "password123");
+        String contenido = "";
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new OriginalTweet(author, content))
+        assertThatThrownBy(() -> new OriginalTweet(autor, contenido))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El tweet debe tener entre 1 y 280 caracteres.");
     }
 
     @Test
-    void shouldFailWhenCreatingATweetWithMoreThanTwoHundredEightyCharacters() {
+    void deberiaFallarAlCrearUnTweetConMasDeDoscientosOchentaCaracteres() {
         // Set up
-        User author = new User("agomez", "password123");
-        String content = "a".repeat(281);
+        User autor = new User("agomez", "password123");
+        String contenido = "a".repeat(281);
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new OriginalTweet(author, content))
+        assertThatThrownBy(() -> new OriginalTweet(autor, contenido))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El tweet debe tener entre 1 y 280 caracteres.");
     }
 
     @Test
-    void shouldFailWhenCreatingATweetWithoutAnAuthor() {
+    void deberiaFallarAlCrearUnTweetSinAutor() {
         // Set up
-        User author = null;
-        String content = "Contenido válido";
+        User autor = null;
+        String contenido = "Contenido válido";
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new OriginalTweet(author, content))
+        assertThatThrownBy(() -> new OriginalTweet(autor, contenido))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El tweet debe tener un autor.");
     }
 
     @Test
-    void shouldCreateAValidRetweetFromAnotherUsersTweet() {
+    void deberiaCrearUnRetweetValidoDelTweetDeOtroUsuario() {
         // Set up
-        User originalAuthor = new User("agomez", "password123");
-        User retweeter = new User("jperez", "password456");
-        OriginalTweet originalTweet = new OriginalTweet(originalAuthor, "Tweet original");
+        User autorOriginal = new User("agomez", "password123");
+        User quienRetuitea = new User("jperez", "password456");
+        OriginalTweet tweetOriginal = new OriginalTweet(autorOriginal, "Tweet original");
 
         // Desarrollo
-        Retweet retweet = new Retweet(retweeter, originalTweet);
+        Retweet retweet = new Retweet(quienRetuitea, tweetOriginal);
 
         // Evaluación
-        assertThat(retweet.getAuthor()).isEqualTo(retweeter);
-        assertThat(retweet.getOrigin()).isEqualTo(originalTweet);
+        assertThat(retweet.getAuthor()).isEqualTo(quienRetuitea);
+        assertThat(retweet.getOrigin()).isEqualTo(tweetOriginal);
         assertThat(retweet.getCreatedAt()).isNotNull();
     }
 
     @Test
-    void shouldFailWhenTryingToRetweetOnesOwnTweet() {
+    void deberiaFallarAlIntentarRetuitearElPropioTweet() {
         // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet originalTweet = new OriginalTweet(author, "Tweet original");
+        User autor = new User("agomez", "password123");
+        OriginalTweet tweetOriginal = new OriginalTweet(autor, "Tweet original");
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new Retweet(author, originalTweet))
+        assertThatThrownBy(() -> new Retweet(autor, tweetOriginal))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("No podés hacer re-tweet de tu propio tweet.");
     }
 
     @Test
-    void shouldConvertAnOriginalTweetToItsInfo() {
+    void deberiaConvertirUnTweetOriginalEnSuInfo() {
         // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet tweet = new OriginalTweet(author, "contenido de prueba");
+        User autor = new User("agomez", "password123");
+        OriginalTweet tweet = new OriginalTweet(autor, "contenido de prueba");
 
         // Desarrollo
         OriginalTweetInfo info = tweet.toInfo();
@@ -117,20 +117,20 @@ class TweetTest {
     }
 
     @Test
-    void shouldConvertARetweetToItsInfo() {
+    void deberiaConvertirUnRetweetEnSuInfo() {
         // Set up
-        User originalAuthor = new User("agomez", "password123");
-        User retweeter = new User("jperez", "password456");
-        OriginalTweet originalTweet = new OriginalTweet(originalAuthor, "Tweet original");
+        User autorOriginal = new User("agomez", "password123");
+        User quienRetuitea = new User("jperez", "password456");
+        OriginalTweet tweetOriginal = new OriginalTweet(autorOriginal, "Tweet original");
 
         // Desarrollo
-        Retweet retweet = new Retweet(retweeter, originalTweet);
+        Retweet retweet = new Retweet(quienRetuitea, tweetOriginal);
         RetweetInfo info = retweet.toInfo();
 
         // Evaluación
         assertThat(info.id()).isEqualTo(retweet.getId());
         assertThat(info.authorUsername()).isEqualTo("jperez");
-        assertThat(info.originalTweetId()).isEqualTo(originalTweet.getId());
+        assertThat(info.originalTweetId()).isEqualTo(tweetOriginal.getId());
         assertThat(info.originalAuthorUsername()).isEqualTo("agomez");
         assertThat(info.originalContent()).isEqualTo("Tweet original");
         assertThat(info.originalDeleted()).isFalse();
@@ -138,10 +138,10 @@ class TweetTest {
     }
 
     @Test
-    void shouldShowAPlaceholderInInfoWhenTheOriginalTweetIsDeleted() {
+    void deberiaMostrarUnTextoDeReemplazoEnLaInfoCuandoElTweetOriginalEstaBorrado() {
         // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet tweet = new OriginalTweet(author, "contenido de prueba");
+        User autor = new User("agomez", "password123");
+        OriginalTweet tweet = new OriginalTweet(autor, "contenido de prueba");
         tweet.markAsDeleted();
 
         // Desarrollo
@@ -154,15 +154,15 @@ class TweetTest {
     }
 
     @Test
-    void shouldShowAPlaceholderAuthorInInfoWhenTheAuthorAccountIsDeleted() {
+    void deberiaMostrarUnAutorDeReemplazoEnLaInfoCuandoLaCuentaDelAutorEstaEliminada() {
         // Set up
-        User author = new User("agomez", "password123");
-        OriginalTweet tweet = new OriginalTweet(author, "contenido de prueba");
+        User autor = new User("agomez", "password123");
+        OriginalTweet tweet = new OriginalTweet(autor, "contenido de prueba");
         // User.tweets es el lado inverso de la relación: en JPA, Hibernate lo completa
         // solo al cargar al usuario desde la base. Acá se simula esa carga a mano para
         // que markAsDeleted() encuentre este tweet al recorrer la colección.
-        author.getTweets().add(tweet);
-        author.markAsDeleted();
+        autor.getTweets().add(tweet);
+        autor.markAsDeleted();
 
         // Desarrollo: al borrarse la cuenta, User.markAsDeleted ya marcó el tweet también
         OriginalTweetInfo info = tweet.toInfo();
@@ -173,37 +173,37 @@ class TweetTest {
     }
 
     @Test
-    void shouldKeepShowingARetweetWhenItsOriginIsDeletedButMarkItAsUnavailable() {
+    void deberiaSeguirMostrandoUnRetweetCuandoSuOrigenEstaBorradoPeroMarcarloNoDisponible() {
         // Set up: jperez retwitea un tweet de agomez, que luego se borra
-        User originalAuthor = new User("agomez", "password123");
-        User retweeter = new User("jperez", "password456");
-        OriginalTweet originalTweet = new OriginalTweet(originalAuthor, "Tweet original");
-        Retweet retweet = new Retweet(retweeter, originalTweet);
+        User autorOriginal = new User("agomez", "password123");
+        User quienRetuitea = new User("jperez", "password456");
+        OriginalTweet tweetOriginal = new OriginalTweet(autorOriginal, "Tweet original");
+        Retweet retweet = new Retweet(quienRetuitea, tweetOriginal);
 
         // Desarrollo
-        originalTweet.markAsDeleted();
+        tweetOriginal.markAsDeleted();
         RetweetInfo info = retweet.toInfo();
 
         // Evaluación: el retweet sigue existiendo y apuntando al mismo origen,
         // solo que ahora se muestra como no disponible.
-        assertThat(info.originalTweetId()).isEqualTo(originalTweet.getId());
+        assertThat(info.originalTweetId()).isEqualTo(tweetOriginal.getId());
         assertThat(info.originalContent()).isEqualTo("Publicación no disponible");
         assertThat(info.originalAuthorUsername()).isEqualTo("agomez");
         assertThat(info.originalDeleted()).isTrue();
     }
 
     @Test
-    void shouldShowThePlaceholderAuthorOnARetweetWhenTheOriginalAuthorAccountIsDeleted() {
+    void deberiaMostrarElAutorDeReemplazoEnUnRetweetCuandoLaCuentaDelAutorOriginalEstaEliminada() {
         // Set up: jperez retwitea un tweet de agomez, y luego se borra la cuenta de agomez
-        User originalAuthor = new User("agomez", "password123");
-        User retweeter = new User("jperez", "password456");
-        OriginalTweet originalTweet = new OriginalTweet(originalAuthor, "Tweet original");
-        Retweet retweet = new Retweet(retweeter, originalTweet);
+        User autorOriginal = new User("agomez", "password123");
+        User quienRetuitea = new User("jperez", "password456");
+        OriginalTweet tweetOriginal = new OriginalTweet(autorOriginal, "Tweet original");
+        Retweet retweet = new Retweet(quienRetuitea, tweetOriginal);
         // Ver comentario equivalente en shouldShowAPlaceholderAuthorInInfoWhenTheAuthorAccountIsDeleted.
-        originalAuthor.getTweets().add(originalTweet);
+        autorOriginal.getTweets().add(tweetOriginal);
 
         // Desarrollo
-        originalAuthor.markAsDeleted();
+        autorOriginal.markAsDeleted();
         RetweetInfo info = retweet.toInfo();
 
         // Evaluación

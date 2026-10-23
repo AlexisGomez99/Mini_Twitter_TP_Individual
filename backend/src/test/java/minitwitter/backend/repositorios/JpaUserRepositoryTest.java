@@ -17,20 +17,20 @@ class JpaUserRepositoryTest {
     private static EntityManagerFactory emf;
 
     private EntityManager em;
-    private UserRepository repository;
+    private UserRepository repositorio;
 
     @BeforeAll
-    static void beforeEverything() {
-        emf = new EmfBuilder().h2Memory().withDropAndCreateDDL().build();
+    static void antesDeTodo() {
+        emf = new EmfBuilder().h2EnMemoria().conRecreacionDeEsquema().construir();
     }
 
     @BeforeEach
-    void beforeEach() {
+    void antesDeCadaTest() {
         // Truncate: limpia todos los datos antes de cada test, para que no queden restos del anterior.
         emf.getSchemaManager().truncate();
 
         em = emf.createEntityManager();
-        repository = UserRepository.repositoryOf(em);
+        repositorio = UserRepository.repositorioDe(em);
 
         em.getTransaction().begin();
         em.persist(new User("agomez", "password123"));
@@ -39,109 +39,109 @@ class JpaUserRepositoryTest {
     }
 
     @Test
-    void shouldFindAnExistingUserByUsername() {
+    void deberiaEncontrarUnUsuarioExistentePorNombreDeUsuario() {
         // Set up (datos cargados en beforeEach)
 
         // Desarrollo
-        var found = repository.getForUsername("agomez");
+        var encontrado = repositorio.obtenerPorNombreUsuario("agomez");
 
         // Evaluación
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("agomez");
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getUsername()).isEqualTo("agomez");
     }
 
     @Test
-    void shouldReturnEmptyWhenTheUsernameDoesNotExist() {
+    void deberiaDevolverVacioCuandoElNombreDeUsuarioNoExiste() {
         // Set up (datos cargados en beforeEach, ninguno se llama "no_existe")
 
         // Desarrollo
-        var found = repository.getForUsername("no_existe");
+        var encontrado = repositorio.obtenerPorNombreUsuario("no_existe");
 
         // Evaluación
-        assertThat(found).isEmpty();
+        assertThat(encontrado).isEmpty();
     }
 
     @Test
-    void shouldFindAnExistingUserById() {
+    void deberiaEncontrarUnUsuarioExistentePorId() {
         // Set up
-        Integer id = repository.getForUsername("agomez").orElseThrow().getId();
+        Integer id = repositorio.obtenerPorNombreUsuario("agomez").orElseThrow().getId();
 
         // Desarrollo
-        var found = repository.getById(id);
+        var encontrado = repositorio.obtenerPorId(id);
 
         // Evaluación
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("agomez");
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getUsername()).isEqualTo("agomez");
     }
 
     @Test
-    void shouldFindAUserByUsernameAndPassword() {
+    void deberiaEncontrarUnUsuarioPorNombreDeUsuarioYContrasenia() {
         // Set up (agomez cargado en beforeEach con password "password123")
 
         // Desarrollo
-        var found = repository.fetchForUsernameAndPassword("agomez", "password123");
+        var encontrado = repositorio.obtenerPorNombreUsuarioYContrasenia("agomez", "password123");
 
         // Evaluación
-        assertThat(found).isPresent();
-        assertThat(found.get().getUsername()).isEqualTo("agomez");
+        assertThat(encontrado).isPresent();
+        assertThat(encontrado.get().getUsername()).isEqualTo("agomez");
     }
 
     @Test
-    void shouldReturnEmptyWhenThePasswordIsIncorrect() {
+    void deberiaDevolverVacioCuandoLaContraseniaEsIncorrecta() {
         // Set up (agomez cargado en beforeEach)
 
         // Desarrollo
-        var found = repository.fetchForUsernameAndPassword("agomez", "password_incorrecta");
+        var encontrado = repositorio.obtenerPorNombreUsuarioYContrasenia("agomez", "password_incorrecta");
 
         // Evaluación
-        assertThat(found).isEmpty();
+        assertThat(encontrado).isEmpty();
     }
 
     @Test
-    void shouldAddANewUser() {
+    void deberiaAgregarUnUsuarioNuevo() {
         // Set up
-        User newUser = new User("nuevo_user", "clave12345");
+        User usuarioNuevo = new User("nuevo_user", "clave12345");
 
         // Desarrollo
         em.getTransaction().begin();
-        repository.addUser(newUser);
+        repositorio.agregarUsuario(usuarioNuevo);
         em.getTransaction().commit();
 
         // Evaluación
-        assertThat(repository.getForUsername("nuevo_user")).isPresent();
+        assertThat(repositorio.obtenerPorNombreUsuario("nuevo_user")).isPresent();
     }
 
     @Test
-    void shouldListAllUsers() {
+    void deberiaListarTodosLosUsuarios() {
         // Set up (agomez y jperez cargados en beforeEach)
 
         // Desarrollo
-        var users = repository.listUsers();
+        var usuarios = repositorio.listarUsuarios();
 
         // Evaluación
-        assertThat(users).hasSize(2);
-        assertThat(users).extracting("username").containsExactlyInAnyOrder("agomez", "jperez");
+        assertThat(usuarios).hasSize(2);
+        assertThat(usuarios).extracting("username").containsExactlyInAnyOrder("agomez", "jperez");
     }
 
     @Test
-    void shouldSoftDeleteAUserCascadingItsTweetsAndFollowsButKeepingOthersRetweetsAsUnavailable() {
+    void deberiaEliminarLogicamenteUnUsuarioEnCascadaConSusTweetsYFollowsPeroMantenerLosRetweetsDeOtrosComoNoDisponibles() {
         // Set up: agomez tiene un tweet, jperez lo retweetea, y se siguen mutuamente.
         // Las lecturas van en la misma transacción que las escrituras siguientes: leer
         // fuera de una transacción activa y usar ese resultado en una transacción
         // posterior hace que Hibernate no reconozca la entidad como ya persistente.
         em.getTransaction().begin();
-        User agomez = repository.getForUsername("agomez").orElseThrow();
-        User jperez = repository.getForUsername("jperez").orElseThrow();
-        Integer agomezId = agomez.getId();
-        Integer jperezId = jperez.getId();
+        User agomez = repositorio.obtenerPorNombreUsuario("agomez").orElseThrow();
+        User jperez = repositorio.obtenerPorNombreUsuario("jperez").orElseThrow();
+        Integer idAgomez = agomez.getId();
+        Integer idJperez = jperez.getId();
 
-        OriginalTweet agomezTweet = new OriginalTweet(agomez, "Tweet de Ana");
-        Retweet jperezRetweet = new Retweet(jperez, agomezTweet);
+        OriginalTweet tweetAgomez = new OriginalTweet(agomez, "Tweet de Ana");
+        Retweet retweetJperez = new Retweet(jperez, tweetAgomez);
 
-        em.persist(agomezTweet);
-        em.persist(jperezRetweet);
-        FollowRepository.repositoryOf(em).follow(agomez, jperez);
-        FollowRepository.repositoryOf(em).follow(jperez, agomez);
+        em.persist(tweetAgomez);
+        em.persist(retweetJperez);
+        FollowRepository.repositorioDe(em).seguir(agomez, jperez);
+        FollowRepository.repositorioDe(em).seguir(jperez, agomez);
         em.getTransaction().commit();
 
         // Vacía el contexto de persistencia: agomez quedó con su colección "tweets" en
@@ -152,39 +152,39 @@ class JpaUserRepositoryTest {
 
         // Desarrollo
         em.getTransaction().begin();
-        User agomezToDelete = repository.getForUsername("agomez").orElseThrow();
-        repository.deleteUser(agomezToDelete);
+        User agomezABorrar = repositorio.obtenerPorNombreUsuario("agomez").orElseThrow();
+        repositorio.eliminarUsuario(agomezABorrar);
         em.getTransaction().commit();
 
         // Evaluación: la fila de agomez se conserva, solo queda marcada como eliminada
-        assertThat(repository.getForUsername("agomez")).isPresent();
-        assertThat(repository.getForUsername("agomez").get().isDeleted()).isTrue();
+        assertThat(repositorio.obtenerPorNombreUsuario("agomez")).isPresent();
+        assertThat(repositorio.obtenerPorNombreUsuario("agomez").get().isDeleted()).isTrue();
 
         // Su propio tweet deja de listarse (se oculta en cascada)
-        assertThat(TweetRepository.repositoryOf(em).findByAuthorId(agomezId)).isEmpty();
+        assertThat(TweetRepository.repositorioDe(em).buscarPorIdAutor(idAgomez, 0, 10).content()).isEmpty();
 
         // El retweet de jperez sobre ese tweet no se borra: sigue existiendo,
         // mostrando el origen como no disponible.
-        var jperezRetweets = RetweetRepository.repositoryOf(em).findByAuthorId(jperezId);
-        assertThat(jperezRetweets).hasSize(1);
-        assertThat(jperezRetweets.get(0).originalContent()).isEqualTo("Publicación no disponible");
-        assertThat(jperezRetweets.get(0).originalAuthorUsername()).isEqualTo("Cuenta eliminada");
+        var retweetsJperez = RetweetRepository.repositorioDe(em).buscarPorIdAutor(idJperez);
+        assertThat(retweetsJperez).hasSize(1);
+        assertThat(retweetsJperez.get(0).originalContent()).isEqualTo("Publicación no disponible");
+        assertThat(retweetsJperez.get(0).originalAuthorUsername()).isEqualTo("Cuenta eliminada");
 
         // Las relaciones de "follow" sí se eliminan al borrar la cuenta
-        assertThat(FollowRepository.repositoryOf(em).isFollowing(agomezId, jperezId)).isFalse();
-        assertThat(FollowRepository.repositoryOf(em).isFollowing(jperezId, agomezId)).isFalse();
+        assertThat(FollowRepository.repositorioDe(em).estaSiguiendo(idAgomez, idJperez)).isFalse();
+        assertThat(FollowRepository.repositorioDe(em).estaSiguiendo(idJperez, idAgomez)).isFalse();
     }
 
     @Test
-    void shouldExcludeDeletedUsersFromListUsers() {
+    void deberiaExcluirLosUsuariosBorradosDeListarUsuarios() {
         // Set up (agomez y jperez cargados en beforeEach)
 
         // Desarrollo
         em.getTransaction().begin();
-        repository.deleteUser(repository.getForUsername("agomez").orElseThrow());
+        repositorio.eliminarUsuario(repositorio.obtenerPorNombreUsuario("agomez").orElseThrow());
         em.getTransaction().commit();
 
         // Evaluación
-        assertThat(repository.listUsers()).extracting("username").containsExactly("jperez");
+        assertThat(repositorio.listarUsuarios()).extracting("username").containsExactly("jperez");
     }
 }

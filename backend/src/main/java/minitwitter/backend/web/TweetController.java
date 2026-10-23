@@ -1,49 +1,42 @@
 package minitwitter.backend.web;
 
 import minitwitter.backend.dto.OriginalTweetInfo;
+import minitwitter.backend.dto.PageResponse;
 import minitwitter.backend.dto.TweetInfo;
 import minitwitter.backend.service.TwitterService;
 import minitwitter.backend.web.dto.NewTweetRequest;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 public class TweetController {
-    private final TwitterService twitterService;
+    private final TwitterService servicioTwitter;
 
-    public TweetController(TwitterService twitterService) {
-        this.twitterService = twitterService;
+    public TweetController(TwitterService servicioTwitter) {
+        this.servicioTwitter = servicioTwitter;
     }
 
     @PostMapping("/tweets")
-    public void createTweet(@RequestBody NewTweetRequest newTweet, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.createTweet(newTweet.userId(), newTweet.content());
+    public void crearTweet(@RequestBody NewTweetRequest nuevoTweet, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.crearTweet(nuevoTweet.userId(), nuevoTweet.content());
     }
 
     @GetMapping("/tweets")
-    public List<OriginalTweetInfo> tweetsForUserId(@RequestParam Integer userId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.listTweetsForUserId(userId);
+    public PageResponse<OriginalTweetInfo> tweetsDelUsuario(@RequestParam("userId") Integer idUsuario, @RequestParam(name = "page", defaultValue = "0") int pagina, @CookieValue("token") String token) {
+        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.listarTweetsDelUsuario(idUsuario, pagina);
     }
 
-    @GetMapping("/tweets/timeline")
-    public List<TweetInfo> timelineForUserId(@RequestParam Integer userId, @CookieValue("token") String token) {
-        this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.getTimelineForUserId(userId);
-    }
-
-    // El usuario sale del token (no se pasa por parámetro): es el feed de quien está logueado.
+    // El usuario sale del token: es el feed de quien está logueado.
     @GetMapping("/tweets/feed")
-    public List<TweetInfo> feed(@CookieValue("token") String token) {
-        int userId = this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.getFeedForUserId(userId);
+    public PageResponse<TweetInfo> feed(@RequestParam(name = "page", defaultValue = "0") int pagina, @CookieValue("token") String token) {
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.obtenerFeedDelUsuario(idUsuario, pagina);
     }
 
     @DeleteMapping("/tweets/{tweetId}")
-    public void deleteTweet(@PathVariable Integer tweetId, @CookieValue("token") String token) {
-        int userId = this.twitterService.verificarTokenAndGetIdUsuario(token);
-        this.twitterService.deleteTweet(userId, tweetId);
+    public void eliminarTweet(@PathVariable("tweetId") Integer idTweet, @CookieValue("token") String token) {
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.eliminarTweet(idUsuario, idTweet);
     }
 }

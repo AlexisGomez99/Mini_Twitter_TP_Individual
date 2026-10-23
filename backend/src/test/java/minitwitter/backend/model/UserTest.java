@@ -9,61 +9,78 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class UserTest {
 
     @Test
-    void shouldCreateAValidUserSuccessfully() {
+    void deberiaCrearUnUsuarioValido() {
         // Set up
-        String username = "agomez";
-        String password = "password123";
+        String nombreUsuario = "agomez";
+        String contrasenia = "password123";
 
         // Desarrollo
-        User user = new User(username, password);
+        User usuario = new User(nombreUsuario, contrasenia);
 
         // Evaluación
-        assertThat(user.getUsername()).isEqualTo(username);
-        assertThat(user.getPassword()).isEqualTo(password);
-        assertThat(user.getCreatedAt()).isNotNull();
+        assertThat(usuario.getUsername()).isEqualTo(nombreUsuario);
+        assertThat(usuario.getPassword()).isEqualTo(contrasenia);
+        assertThat(usuario.getCreatedAt()).isNotNull();
     }
 
     @Test
-    void shouldFailWhenUsernameHasLessThanFiveCharacters() {
+    void deberiaFallarCuandoFaltaLaContraseniaOEstaEnBlanco() {
         // Set up
-        String username = "abcd";
-        String password = "password123";
+        String nombreUsuario = "agomez";
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new User(username, password))
+        assertThatThrownBy(() -> new User(nombreUsuario, null))
                 .isInstanceOf(DomainException.class)
-                .hasMessage("El nombre de usuario debe tener entre 5 y 25 caracteres.");
+                .hasMessage("La contraseña es obligatoria.");
+        assertThatThrownBy(() -> new User(nombreUsuario, "   "))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("La contraseña es obligatoria.");
     }
 
     @Test
-    void shouldFailWhenUsernameHasMoreThanTwentyFiveCharacters() {
+    void deberiaFallarCuandoElNombreDeUsuarioTieneMenosDeCincoCaracteres() {
         // Set up
-        String username = "a".repeat(26);
-        String password = "password123";
+        String nombreUsuario = "abcd";
+        String contrasenia = "password123";
 
         // Desarrollo
         // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThatThrownBy(() -> new User(username, password))
+        assertThatThrownBy(() -> new User(nombreUsuario, contrasenia))
                 .isInstanceOf(DomainException.class)
                 .hasMessage("El nombre de usuario debe tener entre 5 y 25 caracteres.");
     }
 
     @Test
-    void shouldConvertAUserToItsInfoWithoutExposingThePassword() {
+    void deberiaFallarCuandoElNombreDeUsuarioTieneMasDeVeinticincoCaracteres() {
         // Set up
-        User user = new User("agomez", "password123");
+        String nombreUsuario = "a".repeat(26);
+        String contrasenia = "password123";
 
         // Desarrollo
-        UserInfo info = user.toInfo();
+        // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
 
         // Evaluación
-        assertThat(info.id()).isEqualTo(user.getId());
+        assertThatThrownBy(() -> new User(nombreUsuario, contrasenia))
+                .isInstanceOf(DomainException.class)
+                .hasMessage("El nombre de usuario debe tener entre 5 y 25 caracteres.");
+    }
+
+    @Test
+    void deberiaConvertirUnUsuarioEnSuInfoSinExponerLaContrasenia() {
+        // Set up
+        User usuario = new User("agomez", "password123");
+
+        // Desarrollo
+        UserInfo info = usuario.toInfo();
+
+        // Evaluación
+        assertThat(info.id()).isEqualTo(usuario.getId());
         assertThat(info.username()).isEqualTo("agomez");
-        assertThat(info.createdAt()).isEqualTo(user.getCreatedAt());
+        assertThat(info.createdAt()).isEqualTo(usuario.getCreatedAt());
     }
 }

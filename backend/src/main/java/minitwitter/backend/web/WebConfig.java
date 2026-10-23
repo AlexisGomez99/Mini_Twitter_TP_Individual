@@ -7,15 +7,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // Origen del frontend (Vite). allowCredentials es necesario para que el navegador
-    // envíe y acepte la cookie "token" en pedidos entre orígenes distintos; con
-    // credenciales no se puede usar "*" como origen, tiene que ser uno explícito.
-    private static final String FRONTEND_ORIGIN = "http://localhost:5173";
+    private static final String ORIGEN_FRONTEND = "http://localhost:5173";
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins(FRONTEND_ORIGIN)
+    public void addCorsMappings(CorsRegistry registro) {
+        registro.addMapping("/**")
+                .allowedOrigins(ORIGEN_FRONTEND)
                 .allowedMethods("GET", "POST", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);

@@ -10,19 +10,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-        import java.util.List;
-
 @RestController
 public class AuthController {
-    private final TwitterService twitterService;
+    private final TwitterService servicioTwitter;
 
-    public AuthController(TwitterService twitterService) {
-        this.twitterService = twitterService;
+    public AuthController(TwitterService servicioTwitter) {
+        this.servicioTwitter = servicioTwitter;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@RequestBody CredentialsUser credentialsUser) {
-        var token = this.twitterService.login(credentialsUser.username(), credentialsUser.password());
+    public ResponseEntity<Void> iniciarSesion(@RequestBody CredentialsUser credenciales) {
+        var token = this.servicioTwitter.iniciarSesion(credenciales.username(), credenciales.password());
         //agregar token a la response como cookie:
         var cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
@@ -34,12 +32,9 @@ public class AuthController {
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
     }
 
-    // La cookie es HttpOnly: el frontend no puede borrarla, así que la expira el backend.
-    // Tiene que repetir name/path/sameSite/secure del login para que el navegador la
-    // reconozca como la misma. No exige estar logueado: cerrar sesión con la cookie ya
-    // vencida o ausente tiene que funcionar igual.
+    // Consultar si existe otra forma.
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> cerrarSesion() {
         var cookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
                 .path("/")
@@ -51,17 +46,14 @@ public class AuthController {
     }
 
     @PostMapping("/registrar")
-    public void registrarUsuario(@RequestBody CredentialsUser credentialsUser) {
-        this.twitterService.registrarUsuario(credentialsUser.username(), credentialsUser.password());
+    public void registrarUsuario(@RequestBody CredentialsUser credenciales) {
+        this.servicioTwitter.registrarUsuario(credenciales.username(), credenciales.password());
     }
 
-    // Quién está logueado: el frontend no puede leer la cookie (HttpOnly), así que
-    // consulta acá al cargar la página. Si el usuario del token ya fue borrado, la
-    // sesión deja de ser válida.
     @GetMapping("/me")
-    public UserInfo me(@CookieValue("token") String token) {
-        int userId = this.twitterService.verificarTokenAndGetIdUsuario(token);
-        return this.twitterService.getUserById(userId)
+    public UserInfo usuarioLogueado(@CookieValue("token") String token) {
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        return this.servicioTwitter.obtenerUsuarioPorId(idUsuario)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sesión inválida"));
     }
 }

@@ -11,11 +11,11 @@ import org.springframework.context.annotation.Profile;
 public class AppConfiguration {
 
     @Bean
-    public TwitterService twitterService() {
+    public TwitterService servicioTwitter() {
         var emf = new EmfBuilder()
                 .postgres()
-                .withUpdateDDL()
-                .build();
+                .conActualizacionDeEsquema()
+                .construir();
         return new TwitterService(emf);
     }
 }

@@ -1,65 +1,65 @@
 import { useState } from "react";
-import apiService from "../../services/apiService.js";
-import { useAuth } from "../../context/AuthContext.js";
+import servicioApi from "../../services/apiService.js";
+import { useAutenticacion } from "../../context/AuthContext.js";
 
-const MAX_CHARACTERS = 280;
+const MAXIMO_CARACTERES = 280;
 
-export default function NewTweet({ onPublished }){
-    const { user, endSession } = useAuth();
-    const [content, setContent] = useState("");
+export default function NewTweet({ alPublicar }){
+    const { usuario, terminarSesion } = useAutenticacion();
+    const [contenido, setContenido] = useState("");
     const [error, setError] = useState(null);
-    const [published, setPublished] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
+    const [publicado, setPublicado] = useState(false);
+    const [enviando, setEnviando] = useState(false);
 
-    const remaining = MAX_CHARACTERS - content.length;
-    const exceeded = remaining < 0;
-    const empty = content.trim().length === 0;
+    const restantes = MAXIMO_CARACTERES - contenido.length;
+    const excedido = restantes < 0;
+    const vacio = contenido.trim().length === 0;
 
-    function handleChange(event) {
-        setContent(event.target.value);
+    function manejarCambio(evento) {
+        setContenido(evento.target.value);
         setError(null);
-        setPublished(false);
+        setPublicado(false);
     }
 
-    async function handleSubmit(event) {
-        event.preventDefault();
+    async function manejarEnvio(evento) {
+        evento.preventDefault();
         setError(null);
-        setSubmitting(true);
+        setEnviando(true);
         try {
-            await apiService.createTweet(user.id, content);
-            setContent("");
-            setPublished(true);
-            onPublished();
+            await servicioApi.crearTweet(usuario.id, contenido);
+            setContenido("");
+            setPublicado(true);
+            alPublicar();
         } catch (e) {
-            if (e.status === 401) endSession();
+            if (e.estado === 401) terminarSesion();
             else setError(e.message);
         } finally {
-            setSubmitting(false);
+            setEnviando(false);
         }
     }
 
     return (
-        <form className="new-tweet" onSubmit={handleSubmit}>
+        <form className="new-tweet" onSubmit={manejarEnvio}>
             <textarea
-                value={content}
-                onChange={handleChange}
+                value={contenido}
+                onChange={manejarCambio}
                 placeholder="¿Qué está pasando?"
                 aria-label="Nuevo tweet"
                 rows={3}
             />
-            {exceeded && (
+            {excedido && (
                 <p className="new-tweet-message new-tweet-error" role="alert">
-                    El tweet excede el máximo de {MAX_CHARACTERS} caracteres.
+                    El tweet excede el máximo de {MAXIMO_CARACTERES} caracteres.
                 </p>
             )}
             {error && <p className="new-tweet-message new-tweet-error" role="alert">{error}</p>}
-            {published && <p className="new-tweet-message new-tweet-success" role="status">Tweet publicado</p>}
+            {publicado && <p className="new-tweet-message new-tweet-success" role="status">Tweet publicado</p>}
             <div className="new-tweet-footer">
-                <span className={exceeded ? "new-tweet-counter new-tweet-counter-exceeded" : "new-tweet-counter"}>
-                    {remaining} caracteres disponibles
+                <span className={excedido ? "new-tweet-counter new-tweet-counter-exceeded" : "new-tweet-counter"}>
+                    {restantes} caracteres disponibles
                 </span>
-                <button className="new-tweet-button" type="submit" disabled={exceeded || empty || submitting}>
-                    {submitting ? "Enviando..." : "Enviar"}
+                <button className="new-tweet-button" type="submit" disabled={excedido || vacio || enviando}>
+                    {enviando ? "Enviando..." : "Enviar"}
                 </button>
             </div>
         </form>

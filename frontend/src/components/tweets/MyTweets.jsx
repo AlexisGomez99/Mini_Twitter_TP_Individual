@@ -5,8 +5,8 @@ export default function MyTweets(){
 
     return (
         <main className="content">
-            <PageHeader title="Mis tweets"/>
-            <ListTweets scope="mine"/>
+            <PageHeader titulo="Mis tweets"/>
+            <ListTweets alcance="mios"/>
         </main>
     )
 }

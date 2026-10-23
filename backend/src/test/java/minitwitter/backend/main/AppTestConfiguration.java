@@ -18,15 +18,15 @@ import org.springframework.context.annotation.Profile;
 public class AppTestConfiguration {
 
     @Bean
-    public EntityManagerFactory entityManagerFactory() {
+    public EntityManagerFactory fabricaEntityManager() {
         return new EmfBuilder()
-                .h2Memory()
-                .withDropAndCreateDDL()
-                .build();
+                .h2EnMemoria()
+                .conRecreacionDeEsquema()
+                .construir();
     }
 
     @Bean
-    public TwitterService twitterService(EntityManagerFactory emf) {
+    public TwitterService servicioTwitter(EntityManagerFactory emf) {
         return new TwitterService(emf);
     }
 }

@@ -15,23 +15,23 @@ class JpaFollowRepositoryTest {
     private static EntityManagerFactory emf;
 
     private EntityManager em;
-    private FollowRepository repository;
+    private FollowRepository repositorio;
 
     private User agomez;
     private User jperez;
 
     @BeforeAll
-    static void beforeEverything() {
-        emf = new EmfBuilder().h2Memory().withDropAndCreateDDL().build();
+    static void antesDeTodo() {
+        emf = new EmfBuilder().h2EnMemoria().conRecreacionDeEsquema().construir();
     }
 
     @BeforeEach
-    void beforeEach() {
+    void antesDeCadaTest() {
         // Truncate: limpia todos los datos antes de cada test, para que no queden restos del anterior.
         emf.getSchemaManager().truncate();
 
         em = emf.createEntityManager();
-        repository = FollowRepository.repositoryOf(em);
+        repositorio = FollowRepository.repositorioDe(em);
 
         agomez = new User("agomez", "password123");
         jperez = new User("jperez", "password456");
@@ -44,73 +44,73 @@ class JpaFollowRepositoryTest {
 
 
     @Test
-    void shouldCreateAFollowRelationship() {
+    void deberiaCrearUnaRelacionDeSeguimiento() {
         // Set up (usuarios cargados en beforeEach)
 
         // Desarrollo
         em.getTransaction().begin();
-        repository.follow(agomez, jperez);
+        repositorio.seguir(agomez, jperez);
         em.getTransaction().commit();
 
         // Evaluación
-        assertThat(repository.isFollowing(agomez.getId(), jperez.getId())).isTrue();
+        assertThat(repositorio.estaSiguiendo(agomez.getId(), jperez.getId())).isTrue();
     }
 
     @Test
-    void shouldRemoveAFollowRelationshipOnUnfollow() {
+    void deberiaEliminarLaRelacionDeSeguimientoAlDejarDeSeguir() {
         // Set up
         em.getTransaction().begin();
-        repository.follow(agomez, jperez);
+        repositorio.seguir(agomez, jperez);
         em.getTransaction().commit();
 
         // Desarrollo
         em.getTransaction().begin();
-        repository.unfollow(agomez, jperez);
+        repositorio.dejarDeSeguir(agomez, jperez);
         em.getTransaction().commit();
 
         // Evaluación
-        assertThat(repository.isFollowing(agomez.getId(), jperez.getId())).isFalse();
+        assertThat(repositorio.estaSiguiendo(agomez.getId(), jperez.getId())).isFalse();
     }
 
     @Test
-    void shouldReturnFalseWhenThereIsNoFollowRelationship() {
+    void deberiaDevolverFalsoCuandoNoHayRelacionDeSeguimiento() {
         // Set up (usuarios cargados en beforeEach, sin relación de seguimiento entre ellos)
 
         // Desarrollo
-        boolean isFollowing = repository.isFollowing(agomez.getId(), jperez.getId());
+        boolean estaSiguiendo = repositorio.estaSiguiendo(agomez.getId(), jperez.getId());
 
         // Evaluación
-        assertThat(isFollowing).isFalse();
+        assertThat(estaSiguiendo).isFalse();
     }
 
     @Test
-    void shouldReturnTheFollowersOfAUser() {
+    void deberiaDevolverLosSeguidoresDeUnUsuario() {
         // Set up
         em.getTransaction().begin();
-        repository.follow(agomez, jperez);
+        repositorio.seguir(agomez, jperez);
         em.getTransaction().commit();
 
         // Desarrollo
-        var followers = repository.findFollowers(jperez.getId());
+        var seguidores = repositorio.buscarSeguidores(jperez.getId());
 
         // Evaluación
-        assertThat(followers).hasSize(1);
-        assertThat(followers.get(0).username()).isEqualTo("agomez");
+        assertThat(seguidores).hasSize(1);
+        assertThat(seguidores.get(0).username()).isEqualTo("agomez");
     }
 
     @Test
-    void shouldReturnTheUsersSomeoneIsFollowing() {
+    void deberiaDevolverLosUsuariosQueAlguienSigue() {
         // Set up
         em.getTransaction().begin();
-        repository.follow(agomez, jperez);
+        repositorio.seguir(agomez, jperez);
         em.getTransaction().commit();
 
         // Desarrollo
-        var following = repository.findFollowing(agomez.getId());
+        var seguidos = repositorio.buscarSeguidos(agomez.getId());
 
         // Evaluación
-        assertThat(following).hasSize(1);
-        assertThat(following.get(0).username()).isEqualTo("jperez");
+        assertThat(seguidos).hasSize(1);
+        assertThat(seguidos.get(0).username()).isEqualTo("jperez");
     }
 
 }

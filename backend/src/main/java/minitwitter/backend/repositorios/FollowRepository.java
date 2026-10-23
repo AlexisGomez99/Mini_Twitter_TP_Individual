@@ -7,17 +7,17 @@ import minitwitter.backend.model.User;
 import java.util.List;
 
 public interface FollowRepository {
-    static FollowRepository repositoryOf(EntityManager em) {
+    static FollowRepository repositorioDe(EntityManager em) {
         return new JpaFollowRepository(em);
     }
 
-    void follow(User follower, User followed);
+    void seguir(User seguidor, User seguido);
 
-    void unfollow(User follower, User followed);
+    void dejarDeSeguir(User seguidor, User seguido);
 
-    boolean isFollowing(Integer followerId, Integer followedId);
+    boolean estaSiguiendo(Integer idSeguidor, Integer idSeguido);
 
-    List<UserInfo> findFollowers(Integer userId);
+    List<UserInfo> buscarSeguidores(Integer idUsuario);
 
-    List<UserInfo> findFollowing(Integer userId);
+    List<UserInfo> buscarSeguidos(Integer idUsuario);
 }

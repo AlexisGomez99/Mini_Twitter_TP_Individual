@@ -26,17 +26,17 @@ class AuthControllerTest {
 
     @Autowired
     private EntityManagerFactory emf;
-    private TwitterService twitterService;
+    private TwitterService servicioTwitter;
 
     @Autowired
     private MockMvc mockMvc;
 
     @BeforeEach
-    void setUp() {
+    void prepararDatos() {
         emf.getSchemaManager().truncate();
 
-        twitterService = new TwitterService(emf);
-        twitterService.addUser("agomez", "password123");
+        servicioTwitter = new TwitterService(emf);
+        servicioTwitter.agregarUsuario("agomez", "password123");
     }
 
     @Test
@@ -66,7 +66,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /logout expira la cookie token con los mismos atributos que el login")
     void postLogout_conSesion_expiraLaCookie() throws Exception {
-        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
+        Cookie token = new Cookie("token", servicioTwitter.iniciarSesion("agomez", "password123"));
 
         mockMvc.perform(post("/logout").cookie(token))
                 .andExpect(status().isOk())
@@ -108,9 +108,25 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("POST /registrar retorna error 400 si falta la contraseña o el username no es válido")
+    void postRegistrar_datosInvalidos_error400() throws Exception {
+        mockMvc.perform(post("/registrar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"jperez\",\"password\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("La contraseña es obligatoria.")));
+
+        mockMvc.perform(post("/registrar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"abc\",\"password\":\"password456\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("El nombre de usuario debe tener entre 5 y 25 caracteres.")));
+    }
+
+    @Test
     @DisplayName("GET /me devuelve el usuario logueado según la cookie token")
     void getMe_conSesion_devuelveElUsuarioLogueado() throws Exception {
-        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
+        Cookie token = new Cookie("token", servicioTwitter.iniciarSesion("agomez", "password123"));
 
         mockMvc.perform(get("/me").cookie(token))
                 .andExpect(status().isOk())
@@ -129,9 +145,9 @@ class AuthControllerTest {
     @Test
     @DisplayName("GET /me retorna error 401 si el usuario del token ya fue dado de baja")
     void getMe_usuarioBorrado_error401() throws Exception {
-        Cookie token = new Cookie("token", twitterService.login("agomez", "password123"));
-        Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
-        twitterService.deleteUser(id);
+        Cookie token = new Cookie("token", servicioTwitter.iniciarSesion("agomez", "password123"));
+        Integer id = servicioTwitter.obtenerUsuarioPorNombreUsuario("agomez").orElseThrow().id();
+        servicioTwitter.eliminarUsuario(id);
 
         mockMvc.perform(get("/me").cookie(token))
                 .andExpect(status().isUnauthorized())

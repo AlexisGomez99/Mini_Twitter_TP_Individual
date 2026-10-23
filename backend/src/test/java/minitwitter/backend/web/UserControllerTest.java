@@ -25,7 +25,7 @@ class UserControllerTest {
 
     @Autowired
     private EntityManagerFactory emf;
-    private TwitterService twitterService;
+    private TwitterService servicioTwitter;
 
     @Autowired
     private MockMvc mockMvc;
@@ -33,13 +33,13 @@ class UserControllerTest {
     private Cookie token;
 
     @BeforeEach
-    void setUp() {
+    void prepararDatos() {
         emf.getSchemaManager().truncate();
 
-        twitterService = new TwitterService(emf);
-        twitterService.addUser("agomez", "password123");
+        servicioTwitter = new TwitterService(emf);
+        servicioTwitter.agregarUsuario("agomez", "password123");
 
-        token = new Cookie("token", twitterService.login("agomez", "password123"));
+        token = new Cookie("token", servicioTwitter.iniciarSesion("agomez", "password123"));
     }
 
     @Test
@@ -74,7 +74,7 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users sin parámetros devuelve todos los usuarios")
     void getUsers_sinParametros_devuelveTodosLosUsuarios() throws Exception {
-        twitterService.addUser("jperez", "password456");
+        servicioTwitter.agregarUsuario("jperez", "password456");
 
         mockMvc.perform(get("/users").cookie(token))
                 .andExpect(status().isOk())
@@ -85,7 +85,7 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users/{id} devuelve el usuario si existe, buscando por id")
     void getUsersById_usuarioExistente_ok() throws Exception {
-        Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
+        Integer id = servicioTwitter.obtenerUsuarioPorNombreUsuario("agomez").orElseThrow().id();
 
         mockMvc.perform(get("/users/" + id).cookie(token))
                 .andExpect(status().isOk())
@@ -96,7 +96,7 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users/{id} retorna error 401 si no se envía la cookie de sesión")
     void getUsersById_sinToken_error401() throws Exception {
-        Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
+        Integer id = servicioTwitter.obtenerUsuarioPorNombreUsuario("agomez").orElseThrow().id();
 
         mockMvc.perform(get("/users/" + id))
                 .andExpect(status().isUnauthorized())
@@ -106,7 +106,7 @@ class UserControllerTest {
     @Test
     @DisplayName("DELETE /users/{id} borra el usuario correctamente")
     void deleteUsers_usuarioExistente_ok() throws Exception {
-        Integer id = twitterService.getUserByUsername("agomez").orElseThrow().id();
+        Integer id = servicioTwitter.obtenerUsuarioPorNombreUsuario("agomez").orElseThrow().id();
 
         mockMvc.perform(delete("/users/" + id).cookie(token))
                 .andExpect(status().isOk());

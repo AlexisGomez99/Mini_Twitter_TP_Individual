@@ -1,12 +1,12 @@
-import { useAuth } from "../../context/AuthContext.js";
+import { useAutenticacion } from "../../context/AuthContext.js";
 
-export default function PageHeader({ title }){
-    const { user } = useAuth();
+export default function PageHeader({ titulo }){
+    const { usuario } = useAutenticacion();
 
     return (
         <header className="page-header">
-            <h1>{title}</h1>
-            <span className="page-user">@{user.username}</span>
+            <h1>{titulo}</h1>
+            <span className="page-user">@{usuario.username}</span>
         </header>
     )
 }

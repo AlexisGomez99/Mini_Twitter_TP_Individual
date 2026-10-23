@@ -1,65 +1,73 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
+const URL_BASE = "http://localhost:8080";
 
 export class ApiError extends Error {
-    constructor(status, message) {
-        super(message);
-        this.status = status;
+    constructor(estado, mensaje) {
+        super(mensaje);
+        this.estado = estado;
     }
 }
 
-async function request(path, { method = "GET", body } = {}) {
-    let response;
+async function pedir(ruta, { metodo = "GET", cuerpo } = {}) {
+    let respuesta;
     try {
-        response = await fetch(`${BASE_URL}${path}`, {
-            method,
+        respuesta = await fetch(`${URL_BASE}${ruta}`, {
+            method: metodo,
             credentials: "include",
-            headers: body ? { "Content-Type": "application/json" } : undefined,
-            body: body ? JSON.stringify(body) : undefined,
+            headers: cuerpo ? { "Content-Type": "application/json" } : undefined,
+            body: cuerpo ? JSON.stringify(cuerpo) : undefined,
         });
     } catch {
         throw new ApiError(0, "No se pudo conectar con el servidor");
     }
 
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : null;
+    const texto = await respuesta.text();
+    const datos = texto ? JSON.parse(texto) : null;
 
-    if (!response.ok) {
-        throw new ApiError(response.status, data?.message ?? "Error inesperado");
+    if (!respuesta.ok) {
+        throw new ApiError(respuesta.status, datos?.message ?? "Error inesperado");
     }
-    return data;
+    return datos;
 }
 
-const apiService = {
+const servicioApi = {
     // --- Auth ---
-    login: (username, password) => request("/login", { method: "POST", body: { username, password } }),
-    register: (username, password) => request("/registrar", { method: "POST", body: { username, password } }),
-    logout: () => request("/logout", { method: "POST" }),
-    getMe: () => request("/me"),
+    iniciarSesion: (nombreUsuario, contrasenia) =>
+        pedir("/login", { metodo: "POST", cuerpo: { username: nombreUsuario, password: contrasenia } }),
+    registrar: (nombreUsuario, contrasenia) =>
+        pedir("/registrar", { metodo: "POST", cuerpo: { username: nombreUsuario, password: contrasenia } }),
+    cerrarSesion: () => pedir("/logout", { metodo: "POST" }),
+    obtenerYo: () => pedir("/me"),
 
     // --- Usuarios ---
-    listUsers: () => request("/users"),
-    getUserById: (id) => request(`/users/${id}`),
-    getUserByUsername: (username) => request(`/users?username=${encodeURIComponent(username)}`),
-    deleteUser: (id) => request(`/users/${id}`, { method: "DELETE" }),
+    listarUsuarios: () => pedir("/users"),
+    obtenerUsuarioPorId: (id) => pedir(`/users/${id}`),
+    obtenerUsuarioPorNombre: (nombreUsuario) => pedir(`/users?username=${encodeURIComponent(nombreUsuario)}`),
+    eliminarUsuario: (id) => pedir(`/users/${id}`, { metodo: "DELETE" }),
 
     // --- Tweets ---
-    createTweet: (userId, content) => request("/tweets", { method: "POST", body: { userId, content } }),
-    getTweetsByUser: (userId) => request(`/tweets?userId=${userId}`),
-    getTimeline: (userId) => request(`/tweets/timeline?userId=${userId}`),
-    getFeed: () => request("/tweets/feed"),
-    deleteTweet: (tweetId) => request(`/tweets/${tweetId}`, { method: "DELETE" }),
+    crearTweet: (idUsuario, contenido) =>
+        pedir("/tweets", { metodo: "POST", cuerpo: { userId: idUsuario, content: contenido } }),
+    // Los tweets y el feed vienen paginados: la página empieza en 0 y la respuesta es
+    // { content, page, totalPages, totalElements, hasNext }.
+    obtenerTweetsDelUsuario: (idUsuario, pagina = 0) => pedir(`/tweets?userId=${idUsuario}&page=${pagina}`),
+    obtenerFeed: (pagina = 0) => pedir(`/tweets/feed?page=${pagina}`),
+    eliminarTweet: (idTweet) => pedir(`/tweets/${idTweet}`, { metodo: "DELETE" }),
 
     // --- Retweets ---
-    createRetweet: (userId, originTweetId) => request("/retweets", { method: "POST", body: { userId, originTweetId } }),
-    getRetweetsByUser: (userId) => request(`/retweets?userId=${userId}`),
-    deleteRetweet: (retweetId) => request(`/retweets/${retweetId}`, { method: "DELETE" }),
+    crearRetweet: (idUsuario, idTweetOrigen) =>
+        pedir("/retweets", { metodo: "POST", cuerpo: { userId: idUsuario, originTweetId: idTweetOrigen } }),
+    obtenerRetweetsDelUsuario: (idUsuario) => pedir(`/retweets?userId=${idUsuario}`),
+    eliminarRetweet: (idRetweet) => pedir(`/retweets/${idRetweet}`, { metodo: "DELETE" }),
 
     // --- Follows ---
-    follow: (followerId, followedId) => request("/follows", { method: "POST", body: { followerId, followedId } }),
-    unfollow: (followerId, followedId) => request(`/follows?followerId=${followerId}&followedId=${followedId}`, { method: "DELETE" }),
-    isFollowing: (followerId, followedId) => request(`/follows/is-following?followerId=${followerId}&followedId=${followedId}`),
-    getFollowers: (userId) => request(`/follows/followers?userId=${userId}`),
-    getFollowing: (userId) => request(`/follows/following?userId=${userId}`),
+    seguir: (idSeguidor, idSeguido) =>
+        pedir("/follows", { metodo: "POST", cuerpo: { followerId: idSeguidor, followedId: idSeguido } }),
+    dejarDeSeguir: (idSeguidor, idSeguido) =>
+        pedir(`/follows?followerId=${idSeguidor}&followedId=${idSeguido}`, { metodo: "DELETE" }),
+    estaSiguiendo: (idSeguidor, idSeguido) =>
+        pedir(`/follows/is-following?followerId=${idSeguidor}&followedId=${idSeguido}`),
+    obtenerSeguidores: (idUsuario) => pedir(`/follows/followers?userId=${idUsuario}`),
+    obtenerSeguidos: (idUsuario) => pedir(`/follows/following?userId=${idUsuario}`),
 };
 
-export default apiService;
+export default servicioApi;

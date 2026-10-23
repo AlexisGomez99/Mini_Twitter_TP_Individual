@@ -21,331 +21,380 @@ class TwitterServiceTest {
     private static EntityManagerFactory emf;
 
     private EntityManager em;
-    private TwitterService twitterService;
+    private TwitterService servicioTwitter;
 
     private User agomez;
     private User jperez;
-    private OriginalTweet jperezTweet;
-    private Integer agomezId;
-    private Integer jperezId;
+    private OriginalTweet tweetJperez;
+    private Integer idAgomez;
+    private Integer idJperez;
 
     @BeforeAll
-    static void beforeEverything() {
-        emf = new EmfBuilder().h2Memory().withDropAndCreateDDL().build();
+    static void antesDeTodo() {
+        emf = new EmfBuilder().h2EnMemoria().conRecreacionDeEsquema().construir();
     }
 
     @BeforeEach
-    void beforeEach() {
+    void antesDeCadaTest() {
         // Truncate: limpia todos los datos antes de cada test, para que no queden restos del anterior.
         emf.getSchemaManager().truncate();
 
         em = emf.createEntityManager();
-        twitterService = new TwitterService(emf);
+        servicioTwitter = new TwitterService(emf);
 
         agomez = new User("agomez", "password123");
         jperez = new User("jperez", "password456");
-        jperezTweet = new OriginalTweet(jperez, "Tweet de Luis");
+        tweetJperez = new OriginalTweet(jperez, "Tweet de Luis");
 
         em.getTransaction().begin();
         em.persist(agomez);
         em.persist(jperez);
-        em.persist(jperezTweet);
+        em.persist(tweetJperez);
         em.getTransaction().commit();
 
-        agomezId = agomez.getId();
-        jperezId = jperez.getId();
+        idAgomez = agomez.getId();
+        idJperez = jperez.getId();
     }
 
     // --- Auth ---
 
     @Test
-    void shouldLoginWithValidCredentialsAndReturnATokenForTheUser() {
+    void deberiaIniciarSesionConCredencialesValidasYDevolverUnTokenDelUsuario() {
         // Set up (agomez cargado en beforeEach con password "password123")
 
         // Desarrollo
-        String token = twitterService.login("agomez", "password123");
+        String token = servicioTwitter.iniciarSesion("agomez", "password123");
 
         // Evaluación: el token generado corresponde al id real de agomez
-        assertThat(twitterService.verificarTokenAndGetIdUsuario(token)).isEqualTo(agomezId);
+        assertThat(servicioTwitter.verificarTokenYObtenerIdUsuario(token)).isEqualTo(idAgomez);
     }
 
     @Test
-    void shouldFailToLoginWithAnIncorrectPassword() {
+    void deberiaFallarAlIniciarSesionConUnaContraseniaIncorrecta() {
         // Set up (agomez cargado en beforeEach)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.login("agomez", "password_incorrecta"))
+        assertThatThrownBy(() -> servicioTwitter.iniciarSesion("agomez", "password_incorrecta"))
                 .isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    void shouldFailToLoginWithANonexistentUsername() {
+    void deberiaFallarAlIniciarSesionConUnNombreDeUsuarioInexistente() {
         // Set up (usuarios cargados en beforeEach, ninguno se llama "no_existe")
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.login("no_existe", "cualquier_clave"))
+        assertThatThrownBy(() -> servicioTwitter.iniciarSesion("no_existe", "cualquier_clave"))
                 .isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    void shouldFailToVerifyAnInvalidToken() {
+    void deberiaFallarAlVerificarUnTokenInvalido() {
         // Set up
-        String invalidToken = "esto-no-es-un-jwt-valido";
+        String tokenInvalido = "esto-no-es-un-jwt-valido";
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.verificarTokenAndGetIdUsuario(invalidToken))
+        assertThatThrownBy(() -> servicioTwitter.verificarTokenYObtenerIdUsuario(tokenInvalido))
                 .isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    void shouldRegisterANewUserAndReturnItsId() {
+    void deberiaRegistrarUnUsuarioNuevoYDevolverSuId() {
         // Set up (agomez y jperez ya existen; se registra uno distinto)
 
         // Desarrollo
-        Integer newUserId = twitterService.registrarUsuario("nuevo_user", "clave12345");
+        Integer idUsuarioNuevo = servicioTwitter.registrarUsuario("nuevo_user", "clave12345");
 
         // Evaluación
-        assertThat(newUserId).isEqualTo(twitterService.getUserByUsername("nuevo_user").orElseThrow().id());
+        assertThat(idUsuarioNuevo).isEqualTo(servicioTwitter.obtenerUsuarioPorNombreUsuario("nuevo_user").orElseThrow().id());
     }
 
     @Test
-    void shouldFailToRegisterAUsernameThatAlreadyExists() {
+    void deberiaFallarAlRegistrarUnNombreDeUsuarioQueYaExiste() {
         // Set up (agomez cargado en beforeEach)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.registrarUsuario("agomez", "otra_clave"))
+        assertThatThrownBy(() -> servicioTwitter.registrarUsuario("agomez", "otra_clave"))
                 .isInstanceOf(RuntimeException.class);
     }
 
     // --- Usuarios ---
 
     @Test
-    void shouldDoNothingWhenDeletingANonexistentUser() {
+    void deberiaNoHacerNadaAlEliminarUnUsuarioInexistente() {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteUser(999999)).doesNotThrowAnyException();
+        assertThatCode(() -> servicioTwitter.eliminarUsuario(999999)).doesNotThrowAnyException();
     }
 
     // --- Tweets ---
 
     @Test
-    void shouldCreateATweetForAnExistingUser() {
+    void deberiaCrearUnTweetParaUnUsuarioExistente() {
         // Set up (usuarios cargados en beforeEach)
 
         // Desarrollo
-        twitterService.createTweet(agomezId, "Mi primer tweet");
+        servicioTwitter.crearTweet(idAgomez, "Mi primer tweet");
 
         // Evaluación
-        var tweets = twitterService.listTweetsForUserId(agomezId);
+        var tweets = servicioTwitter.listarTweetsDelUsuario(idAgomez, 0).content();
         assertThat(tweets).hasSize(1);
         assertThat(tweets.get(0).content()).isEqualTo("Mi primer tweet");
     }
 
     @Test
-    void shouldFailToCreateATweetForANonexistentUser() {
+    void deberiaFallarAlCrearUnTweetParaUnUsuarioInexistente() {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createTweet(999999, "contenido"))
+        assertThatThrownBy(() -> servicioTwitter.crearTweet(999999, "contenido"))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToCreateATweetForADeletedUser() {
+    void deberiaFallarAlCrearUnTweetParaUnUsuarioBorrado() {
         // Set up
-        twitterService.deleteUser(agomezId);
+        servicioTwitter.eliminarUsuario(idAgomez);
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createTweet(agomezId, "contenido"))
+        assertThatThrownBy(() -> servicioTwitter.crearTweet(idAgomez, "contenido"))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldDeleteAnExistingTweet() {
+    void deberiaEliminarUnTweetExistente() {
         // Set up
-        twitterService.createTweet(agomezId, "Tweet a borrar");
-        Integer tweetId = twitterService.listTweetsForUserId(agomezId).get(0).id();
+        servicioTwitter.crearTweet(idAgomez, "Tweet a borrar");
+        Integer idTweet = servicioTwitter.listarTweetsDelUsuario(idAgomez, 0).content().get(0).id();
 
         // Desarrollo
-        twitterService.deleteTweet(agomezId, tweetId);
+        servicioTwitter.eliminarTweet(idAgomez, idTweet);
 
         // Evaluación
-        assertThat(twitterService.listTweetsForUserId(agomezId)).isEmpty();
+        assertThat(servicioTwitter.listarTweetsDelUsuario(idAgomez, 0).content()).isEmpty();
     }
 
     @Test
-    void shouldFailToDeleteATweetOfAnotherUser() {
+    void deberiaFallarAlEliminarUnTweetDeOtroUsuario() {
         // Set up (el tweet de jperez se cargó en beforeEach)
 
         // Desarrollo / Evaluación: agomez no puede borrar el tweet de jperez
-        assertThatThrownBy(() -> twitterService.deleteTweet(agomezId, jperezTweet.getId()))
+        assertThatThrownBy(() -> servicioTwitter.eliminarTweet(idAgomez, tweetJperez.getId()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("No podés eliminar un tweet de otra persona");
-        assertThat(twitterService.listTweetsForUserId(jperezId)).hasSize(1);
+        assertThat(servicioTwitter.listarTweetsDelUsuario(idJperez, 0).content()).hasSize(1);
     }
 
     @Test
-    void shouldDoNothingWhenDeletingANonexistentTweet() {
+    void deberiaNoHacerNadaAlEliminarUnTweetInexistente() {
         // Set up (base sin ningún tweet con id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteTweet(agomezId, 999999)).doesNotThrowAnyException();
+        assertThatCode(() -> servicioTwitter.eliminarTweet(idAgomez, 999999)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void deberiaDevolverElFeedEnPaginasDeVeinte() {
+        // Set up: agomez publica 21 tweets
+        for (int i = 1; i <= 21; i++) {
+            servicioTwitter.crearTweet(idAgomez, "Tweet " + i);
+        }
+
+        // Desarrollo
+        var primeraPagina = servicioTwitter.obtenerFeedDelUsuario(idAgomez, 0);
+        var segundaPagina = servicioTwitter.obtenerFeedDelUsuario(idAgomez, 1);
+
+        // Evaluación: 20 en la primera (con más páginas) y el que sobra en la segunda
+        assertThat(primeraPagina.content()).hasSize(20);
+        assertThat(primeraPagina.hasNext()).isTrue();
+        assertThat(primeraPagina.totalElements()).isEqualTo(21);
+        assertThat(primeraPagina.totalPages()).isEqualTo(2);
+        assertThat(segundaPagina.content()).hasSize(1);
+        assertThat(segundaPagina.hasNext()).isFalse();
+    }
+
+    @Test
+    void deberiaDevolverLosTweetsDelUsuarioEnPaginasDeDiez() {
+        // Set up: agomez publica 11 tweets
+        for (int i = 1; i <= 11; i++) {
+            servicioTwitter.crearTweet(idAgomez, "Tweet " + i);
+        }
+
+        // Desarrollo
+        var primeraPagina = servicioTwitter.listarTweetsDelUsuario(idAgomez, 0);
+        var segundaPagina = servicioTwitter.listarTweetsDelUsuario(idAgomez, 1);
+
+        // Evaluación
+        assertThat(primeraPagina.content()).hasSize(10);
+        assertThat(primeraPagina.hasNext()).isTrue();
+        assertThat(segundaPagina.content()).hasSize(1);
+        assertThat(segundaPagina.hasNext()).isFalse();
+    }
+
+    @Test
+    void deberiaFallarAlPedirUnaPaginaNegativa() {
+        // Set up (usuarios cargados en beforeEach)
+
+        // Desarrollo / Evaluación
+        assertThatThrownBy(() -> servicioTwitter.obtenerFeedDelUsuario(idAgomez, -1))
+                .isInstanceOf(DomainException.class);
+        assertThatThrownBy(() -> servicioTwitter.listarTweetsDelUsuario(idAgomez, -1))
+                .isInstanceOf(DomainException.class);
     }
 
     // --- Retweets ---
 
     @Test
-    void shouldCreateARetweetForAnExistingUserAndTweet() {
+    void deberiaCrearUnRetweetParaUnUsuarioYUnTweetExistentes() {
         // Set up (usuarios y tweet cargados en beforeEach)
 
         // Desarrollo
-        twitterService.createRetweet(agomezId, jperezTweet.getId());
+        servicioTwitter.crearRetweet(idAgomez, tweetJperez.getId());
 
         // Evaluación
-        var retweets = twitterService.listRetweetsForUserId(agomezId);
+        var retweets = servicioTwitter.listarRetweetsDelUsuario(idAgomez);
         assertThat(retweets).hasSize(1);
         assertThat(retweets.get(0).originalAuthorUsername()).isEqualTo("jperez");
     }
 
     @Test
-    void shouldFailToCreateARetweetForANonexistentUser() {
+    void deberiaFallarAlCrearUnRetweetParaUnUsuarioInexistente() {
         // Set up (jperezTweet cargado en beforeEach, ningún usuario tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(999999, jperezTweet.getId()))
+        assertThatThrownBy(() -> servicioTwitter.crearRetweet(999999, tweetJperez.getId()))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToCreateARetweetOfANonexistentTweet() {
+    void deberiaFallarAlCrearUnRetweetDeUnTweetInexistente() {
         // Set up (agomez cargado en beforeEach, ningún tweet tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(agomezId, 999999))
+        assertThatThrownBy(() -> servicioTwitter.crearRetweet(idAgomez, 999999))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToCreateARetweetForADeletedUser() {
+    void deberiaFallarAlCrearUnRetweetParaUnUsuarioBorrado() {
         // Set up
-        twitterService.deleteUser(agomezId);
+        servicioTwitter.eliminarUsuario(idAgomez);
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(agomezId, jperezTweet.getId()))
+        assertThatThrownBy(() -> servicioTwitter.crearRetweet(idAgomez, tweetJperez.getId()))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToCreateARetweetOfADeletedTweet() {
+    void deberiaFallarAlCrearUnRetweetDeUnTweetBorrado() {
         // Set up
-        twitterService.deleteTweet(jperezId, jperezTweet.getId());
+        servicioTwitter.eliminarTweet(idJperez, tweetJperez.getId());
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.createRetweet(agomezId, jperezTweet.getId()))
+        assertThatThrownBy(() -> servicioTwitter.crearRetweet(idAgomez, tweetJperez.getId()))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldDeleteAnExistingRetweet() {
+    void deberiaEliminarUnRetweetExistente() {
         // Set up
-        twitterService.createRetweet(agomezId, jperezTweet.getId());
-        Integer retweetId = twitterService.listRetweetsForUserId(agomezId).get(0).id();
+        servicioTwitter.crearRetweet(idAgomez, tweetJperez.getId());
+        Integer idRetweet = servicioTwitter.listarRetweetsDelUsuario(idAgomez).get(0).id();
 
         // Desarrollo
-        twitterService.deleteRetweet(retweetId);
+        servicioTwitter.eliminarRetweet(idRetweet);
 
         // Evaluación
-        assertThat(twitterService.listRetweetsForUserId(agomezId)).isEmpty();
+        assertThat(servicioTwitter.listarRetweetsDelUsuario(idAgomez)).isEmpty();
     }
 
     @Test
-    void shouldDoNothingWhenDeletingANonexistentRetweet() {
+    void deberiaNoHacerNadaAlEliminarUnRetweetInexistente() {
         // Set up (base sin ningún retweet con id 999999)
 
         // Desarrollo / Evaluación: no debería lanzar ninguna excepción
-        assertThatCode(() -> twitterService.deleteRetweet(999999)).doesNotThrowAnyException();
+        assertThatCode(() -> servicioTwitter.eliminarRetweet(999999)).doesNotThrowAnyException();
     }
 
     // --- Follows ---
 
     @Test
-    void shouldCreateAFollowRelationship() {
+    void deberiaCrearUnaRelacionDeSeguimiento() {
         // Set up (usuarios cargados en beforeEach)
 
         // Desarrollo
-        twitterService.follow(agomezId, jperezId);
+        servicioTwitter.seguir(idAgomez, idJperez);
 
         // Evaluación
-        assertThat(twitterService.isFollowing(agomezId, jperezId)).isTrue();
+        assertThat(servicioTwitter.estaSiguiendo(idAgomez, idJperez)).isTrue();
     }
 
     @Test
-    void shouldDoNothingWhenFollowingSomeoneAlreadyFollowed() {
+    void deberiaNoHacerNadaAlSeguirAAlguienQueYaSeSigue() {
         // Set up
-        twitterService.follow(agomezId, jperezId);
+        servicioTwitter.seguir(idAgomez, idJperez);
 
         // Desarrollo / Evaluación: seguir de nuevo no lanza excepción ni duplica la relación
-        assertThatCode(() -> twitterService.follow(agomezId, jperezId)).doesNotThrowAnyException();
-        assertThat(twitterService.getFollowers(jperezId)).hasSize(1);
+        assertThatCode(() -> servicioTwitter.seguir(idAgomez, idJperez)).doesNotThrowAnyException();
+        assertThat(servicioTwitter.obtenerSeguidores(idJperez)).hasSize(1);
     }
 
     @Test
-    void shouldFailToFollowWhenTheFollowerDoesNotExist() {
+    void deberiaFallarAlSeguirCuandoElSeguidorNoExiste() {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(999999, jperezId))
+        assertThatThrownBy(() -> servicioTwitter.seguir(999999, idJperez))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToFollowWhenTheFollowedDoesNotExist() {
+    void deberiaFallarAlSeguirCuandoElSeguidoNoExiste() {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(agomezId, 999999))
+        assertThatThrownBy(() -> servicioTwitter.seguir(idAgomez, 999999))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToFollowWhenTheFollowerIsDeleted() {
+    void deberiaFallarAlSeguirCuandoElSeguidorEstaBorrado() {
         // Set up
-        twitterService.deleteUser(agomezId);
+        servicioTwitter.eliminarUsuario(idAgomez);
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(agomezId, jperezId))
+        assertThatThrownBy(() -> servicioTwitter.seguir(idAgomez, idJperez))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldFailToFollowWhenTheFollowedIsDeleted() {
+    void deberiaFallarAlSeguirCuandoElSeguidoEstaBorrado() {
         // Set up
-        twitterService.deleteUser(jperezId);
+        servicioTwitter.eliminarUsuario(idJperez);
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.follow(agomezId, jperezId))
+        assertThatThrownBy(() -> servicioTwitter.seguir(idAgomez, idJperez))
                 .isInstanceOf(DomainException.class);
     }
 
     @Test
-    void shouldRemoveAFollowRelationshipOnUnfollow() {
+    void deberiaEliminarLaRelacionDeSeguimientoAlDejarDeSeguir() {
         // Set up
-        twitterService.follow(agomezId, jperezId);
+        servicioTwitter.seguir(idAgomez, idJperez);
 
         // Desarrollo
-        twitterService.unfollow(agomezId, jperezId);
+        servicioTwitter.dejarDeSeguir(idAgomez, idJperez);
 
         // Evaluación
-        assertThat(twitterService.isFollowing(agomezId, jperezId)).isFalse();
+        assertThat(servicioTwitter.estaSiguiendo(idAgomez, idJperez)).isFalse();
     }
 
     @Test
-    void shouldFailToUnfollowWhenTheFollowerDoesNotExist() {
+    void deberiaFallarAlDejarDeSeguirCuandoElSeguidorNoExiste() {
         // Set up (usuarios cargados en beforeEach, ninguno tiene id 999999)
 
         // Desarrollo / Evaluación
-        assertThatThrownBy(() -> twitterService.unfollow(999999, jperezId))
+        assertThatThrownBy(() -> servicioTwitter.dejarDeSeguir(999999, idJperez))
                 .isInstanceOf(DomainException.class);
     }
 

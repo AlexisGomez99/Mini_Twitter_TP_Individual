@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router";
 import Login from "./components/auth/Login.jsx";
 import ProtectedRoute from "./components/auth/ProtectedRoute.jsx";
+import Register from "./components/auth/Register.jsx";
 import Followers from "./components/follows/Followers.jsx";
 import Following from "./components/follows/Following.jsx";
 import SearchUsers from "./components/follows/SearchUsers.jsx";
@@ -14,6 +15,7 @@ export default function App(){
     return (
         <Routes>
             <Route path="/login" element={<Login/>}/>
+            <Route path="/registro" element={<Register/>}/>
             <Route element={<ProtectedRoute><Layout/></ProtectedRoute>}>
                 <Route path="/" element={<Home/>}/>
                 <Route path="/mis-tweets" element={<MyTweets/>}/>

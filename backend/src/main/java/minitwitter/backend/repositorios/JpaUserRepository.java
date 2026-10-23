@@ -15,39 +15,40 @@ public class JpaUserRepository implements UserRepository {
     }
 
     @Override
-    public Optional<User> getForUsername(String username) {
-        var query = em.createQuery("from User u where u.username = :username", User.class);
-        query.setParameter("username", username);
-        return Optional.ofNullable(query.getSingleResultOrNull());
+    public Optional<User> obtenerPorNombreUsuario(String nombreUsuario) {
+        var consulta = em.createQuery("from User u where u.username = :nombreUsuario", User.class);
+        consulta.setParameter("nombreUsuario", nombreUsuario);
+        return Optional.ofNullable(consulta.getSingleResultOrNull());
     }
 
     @Override
-    public Optional<User> getById(Integer id) {
+    public Optional<User> obtenerPorId(Integer id) {
         return Optional.ofNullable(em.find(User.class, id));
     }
 
     @Override
-    public Optional<User> fetchForUsernameAndPassword(String username, String password) {
-        var exist = em.createQuery("from User u where u.username = :username and u.password = :password", User.class);
-        exist.setParameter("username", username);
-        exist.setParameter("password", password);
-        return Optional.ofNullable(exist.getSingleResultOrNull());
+    public Optional<User> obtenerPorNombreUsuarioYContrasenia(String nombreUsuario, String contrasenia) {
+        var consulta = em.createQuery(
+                "from User u where u.username = :nombreUsuario and u.password = :contrasenia", User.class);
+        consulta.setParameter("nombreUsuario", nombreUsuario);
+        consulta.setParameter("contrasenia", contrasenia);
+        return Optional.ofNullable(consulta.getSingleResultOrNull());
     }
 
     @Override
-    public void addUser(User user) {
-        em.persist(user);
+    public void agregarUsuario(User usuario) {
+        em.persist(usuario);
     }
 
     @Override
-    public void deleteUser(User user) {
-        user.markAsDeleted();
+    public void eliminarUsuario(User usuario) {
+        usuario.markAsDeleted();
     }
 
     @Override
-    public List<UserInfo> listUsers() {
-        var query = em.createQuery(
+    public List<UserInfo> listarUsuarios() {
+        var consulta = em.createQuery(
                 "select u from User u where u.deleted = false order by u.username", User.class);
-        return query.getResultList().stream().map(User::toInfo).toList();
+        return consulta.getResultList().stream().map(User::toInfo).toList();
     }
 }

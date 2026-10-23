@@ -1,40 +1,40 @@
 import { useState } from "react";
-import { Navigate } from "react-router";
-import { useAuth } from "../../context/AuthContext.js";
+import { Link, Navigate } from "react-router";
+import { useAutenticacion } from "../../context/AuthContext.js";
 
 export default function Login(){
-    const { user, loading, login } = useAuth();
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
+    const { usuario, cargando, iniciarSesion } = useAutenticacion();
+    const [nombreUsuario, setNombreUsuario] = useState("");
+    const [contrasenia, setContrasenia] = useState("");
     const [error, setError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
+    const [enviando, setEnviando] = useState(false);
 
-    if (loading) return null;
-    if (user) return <Navigate to="/" replace/>
+    if (cargando) return null;
+    if (usuario) return <Navigate to="/" replace/>
 
-    async function handleSubmit(event) {
-        event.preventDefault();
+    async function manejarEnvio(evento) {
+        evento.preventDefault();
         setError(null);
-        setSubmitting(true);
+        setEnviando(true);
         try {
-            await login(username, password);
+            await iniciarSesion(nombreUsuario, contrasenia);
         } catch (e) {
             setError(e.message);
         } finally {
-            setSubmitting(false);
+            setEnviando(false);
         }
     }
 
     return (
         <main className="login">
             <h1>Iniciar sesión</h1>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={manejarEnvio}>
                 <label className="login-field">
                     Usuario
                     <input
                         type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        value={nombreUsuario}
+                        onChange={(e) => setNombreUsuario(e.target.value)}
                         autoComplete="username"
                         required
                     />
@@ -43,17 +43,18 @@ export default function Login(){
                     Contraseña
                     <input
                         type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        value={contrasenia}
+                        onChange={(e) => setContrasenia(e.target.value)}
                         autoComplete="current-password"
                         required
                     />
                 </label>
                 {error && <p className="login-error" role="alert">{error}</p>}
-                <button className="login-button" type="submit" disabled={submitting}>
-                    {submitting ? "Ingresando..." : "Ingresar"}
+                <button className="login-button" type="submit" disabled={enviando}>
+                    {enviando ? "Ingresando..." : "Ingresar"}
                 </button>
             </form>
+            <Link to="/registro" className="login-secondary-button">Crear cuenta</Link>
         </main>
     )
 }

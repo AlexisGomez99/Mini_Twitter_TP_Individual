@@ -15,48 +15,48 @@ public class JpaFollowRepository implements FollowRepository {
     }
 
     @Override
-    public void follow(User follower, User followed) {
-        em.persist(new Follow(follower, followed));
+    public void seguir(User seguidor, User seguido) {
+        em.persist(new Follow(seguidor, seguido));
     }
 
     @Override
-    public void unfollow(User follower, User followed) {
-        var query = em.createQuery(
-                "delete from Follow f where f.follower = :follower and f.followed = :followed");
-        query.setParameter("follower", follower);
-        query.setParameter("followed", followed);
-        query.executeUpdate();
+    public void dejarDeSeguir(User seguidor, User seguido) {
+        var consulta = em.createQuery(
+                "delete from Follow f where f.follower = :seguidor and f.followed = :seguido");
+        consulta.setParameter("seguidor", seguidor);
+        consulta.setParameter("seguido", seguido);
+        consulta.executeUpdate();
     }
 
     @Override
-    public boolean isFollowing(Integer followerId, Integer followedId) {
-        var query = em.createQuery(
+    public boolean estaSiguiendo(Integer idSeguidor, Integer idSeguido) {
+        var consulta = em.createQuery(
                 "select count(f) from Follow f "
-                        + "where f.follower.id = :followerId "
-                        + "and f.followed.id = :followedId",
+                        + "where f.follower.id = :idSeguidor "
+                        + "and f.followed.id = :idSeguido",
                 Long.class);
-        query.setParameter("followerId", followerId);
-        query.setParameter("followedId", followedId);
-        return query.getSingleResult() > 0;
+        consulta.setParameter("idSeguidor", idSeguidor);
+        consulta.setParameter("idSeguido", idSeguido);
+        return consulta.getSingleResult() > 0;
     }
 
     @Override
-    public List<UserInfo> findFollowers(Integer userId) {
+    public List<UserInfo> buscarSeguidores(Integer idUsuario) {
         // No hace falta filtrar cuentas eliminadas acá: User.markAsDeleted() ya borra
         // todas las relaciones de follow del usuario (en ambos sentidos) al eliminarlo.
-        var query = em.createQuery(
-                "select f.follower from Follow f where f.followed.id = :userId",
+        var consulta = em.createQuery(
+                "select f.follower from Follow f where f.followed.id = :idUsuario",
                 User.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(User::toInfo).toList();
+        consulta.setParameter("idUsuario", idUsuario);
+        return consulta.getResultList().stream().map(User::toInfo).toList();
     }
 
     @Override
-    public List<UserInfo> findFollowing(Integer userId) {
-        var query = em.createQuery(
-                "select f.followed from Follow f where f.follower.id = :userId",
+    public List<UserInfo> buscarSeguidos(Integer idUsuario) {
+        var consulta = em.createQuery(
+                "select f.followed from Follow f where f.follower.id = :idUsuario",
                 User.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(User::toInfo).toList();
+        consulta.setParameter("idUsuario", idUsuario);
+        return consulta.getResultList().stream().map(User::toInfo).toList();
     }
 }

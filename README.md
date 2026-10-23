@@ -73,13 +73,23 @@ Salvo un caso puntual, toda la API trabaja con **ids** (`Integer`) en vez de use
 - Como la cookie es `HttpOnly` el frontend no puede leerla; para saber quién está logueado consulta `GET /me`.
 - **CORS:** el backend acepta pedidos con credenciales desde `http://localhost:5173` (el frontend con Vite). El origen se cambia en `WebConfig`.
 
+### Paginación
+
+`GET /tweets/feed` (20 por página) y `GET /tweets?userId=` (10 por página) devuelven una página en vez de una lista. El tamaño es fijo (constantes en `TwitterService`); el cliente solo elige `page` (por defecto 0). Una `page` negativa o que no sea un número responde **400**; una página fuera de rango devuelve `content` vacío.
+
+```json
+{ "content": [ ... ], "page": 0, "totalPages": 3, "totalElements": 57, "hasNext": true }
+```
+
+Se usa `LIMIT/OFFSET` (la página N saltea N × tamaño filas) más un `count` para el total, ordenando por fecha y desempatando por id para que el orden sea estable.
+
 ## Endpoints principales
 
 | Método | Ruta                       | Descripción                                   |
 |--------|----------------------------|------------------------------------------------|
 | POST   | `/login`                   | Inicia sesión (`{ username, password }`) y devuelve la cookie `token` |
 | POST   | `/logout`                  | Cierra sesión: expira la cookie `token`        |
-| POST   | `/registrar`               | Registra un usuario nuevo (`{ username, password }`) |
+| POST   | `/registrar`               | Registra un usuario nuevo (`{ username, password }`). Es pública: no requiere sesión. Responde 400 si el username ya existe, no tiene entre 5 y 25 caracteres o la contraseña está vacía |
 | GET    | `/me`                      | Usuario logueado según la cookie `token`       |
 | POST   | `/users`                   | Crea un usuario                                |
 | GET    | `/users`                   | Lista todos los usuarios                       |
@@ -87,9 +97,8 @@ Salvo un caso puntual, toda la API trabaja con **ids** (`Integer`) en vez de use
 | GET    | `/users/{id}`              | Busca un usuario por id                        |
 | DELETE | `/users/{id}`              | Borra (soft delete) un usuario                 |
 | POST   | `/tweets`                  | Crea un tweet (`{ userId, content }`)          |
-| GET    | `/tweets?userId=`          | Tweets propios de un usuario                   |
-| GET    | `/tweets/timeline?userId=` | Timeline (tweets + retweets) de un usuario     |
-| GET    | `/tweets/feed`             | Feed de inicio: tweets y retweets propios y de los usuarios que sigue quien está logueado, del más nuevo al más viejo |
+| GET    | `/tweets?userId=&page=`    | Tweets propios de un usuario, **paginados de a 10** (`page` empieza en 0) |
+| GET    | `/tweets/feed?page=`       | Feed de inicio: tweets y retweets propios y de los usuarios que sigue quien está logueado, del más nuevo al más viejo, **paginado de a 20** (`page` empieza en 0) |
 | DELETE | `/tweets/{id}`             | Borra (soft delete) un tweet propio; si es de otra persona responde 403 |
 | POST   | `/retweets`                | Crea un retweet (`{ userId, originTweetId }`)  |
 | GET    | `/retweets?userId=`        | Retweets de un usuario                         |

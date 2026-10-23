@@ -8,50 +8,44 @@ import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
-// El término advice viene de AOP: un bloque de código que se ejecuta antes y/o después
-// de otro. Acá centralizamos el manejo de errores para todos los controllers.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeExceptions(RuntimeException ex) {
+    public ResponseEntity<ErrorResponse> manejarErroresDeNegocio(RuntimeException excepcion) {
         return ResponseEntity
                 .badRequest()
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(new ErrorResponse(excepcion.getMessage()));
     }
 
-    // Para los errores que necesitan un código distinto de 400 (hoy, el 401 de
-    // autenticación): quien lanza la excepción elige el status. Es más específico
-    // que RuntimeException, así que Spring lo prefiere sobre el handler de arriba.
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+    public ResponseEntity<ErrorResponse> manejarEstadoHttp(ResponseStatusException excepcion) {
         return ResponseEntity
-                .status(ex.getStatusCode())
-                .body(new ErrorResponse(ex.getReason()));
+                .status(excepcion.getStatusCode())
+                .body(new ErrorResponse(excepcion.getReason()));
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class,
-            MissingServletRequestParameterException.class})
-    public ResponseEntity<ErrorResponse> handleSpringMVCParams() {
-        ErrorResponse error = new ErrorResponse("Parámetros inválidos");
-        return ResponseEntity.badRequest().body(error);
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ErrorResponse> manejarParametrosInvalidos() {
+        ErrorResponse respuestaError = new ErrorResponse("Parámetros inválidos");
+        return ResponseEntity.badRequest().body(respuestaError);
     }
 
-    // Se lanza cuando un endpoint que requiere estar logueado (@CookieValue("token"))
-    // no recibe la cookie: sin este handler, caía en el catch-all de abajo y devolvía
-    // un 500 en vez de un 401 claro.
     @ExceptionHandler(MissingRequestCookieException.class)
-    public ResponseEntity<ErrorResponse> handleMissingToken() {
-        ErrorResponse error = new ErrorResponse("No autenticado");
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    public ResponseEntity<ErrorResponse> manejarTokenFaltante() {
+        ErrorResponse respuestaError = new ErrorResponse("No autenticado");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(respuestaError);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleException() {
-        ErrorResponse error = new ErrorResponse("Algo salió mal, contactar al administrador.");
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    public ResponseEntity<ErrorResponse> manejarErrorInesperado() {
+        ErrorResponse respuestaError = new ErrorResponse("Algo salió mal, contactar al administrador.");
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(respuestaError);
     }
 }

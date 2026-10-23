@@ -1,56 +1,68 @@
 import Avatar from "../common/Avatar.jsx";
+import TweetActions from "./TweetActions.jsx";
 
-function formatDate(isoString) {
-    const date = new Date(isoString);
-    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+function formatearFecha(fechaIso) {
+    const fecha = new Date(fechaIso);
+    const minutos = Math.floor((Date.now() - fecha.getTime()) / 60000);
 
-    if (minutes < 1) return "ahora";
-    if (minutes < 60) return `${minutes} min`;
+    if (minutos < 1) return "ahora";
+    if (minutos < 60) return `${minutos} min`;
 
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} h`;
+    const horas = Math.floor(minutos / 60);
+    if (horas < 24) return `${horas} h`;
 
-    return date.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+    return fecha.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
 }
 
-export default function Tweet({ authorUsername, content, createdAt, retweetedBy, unavailable, onDelete }){
-    const time = (
-        <time dateTime={createdAt} title={new Date(createdAt).toLocaleString("es-AR")}>
-            {formatDate(createdAt)}
+// mostrarAcciones: muestra la barra de comentar/retwittear/like (solo en tweets originales).
+// puedeRetuitear, retuiteado, retuiteoOcupado y alAlternarRetweet son para el botón de retwittear.
+export default function Tweet({ autor, contenido, fecha, retuiteadoPor, noDisponible, alEliminar,
+                                mostrarAcciones, puedeRetuitear, retuiteado, retuiteoOcupado, alAlternarRetweet }){
+    const hora = (
+        <time dateTime={fecha} title={new Date(fecha).toLocaleString("es-AR")}>
+            {formatearFecha(fecha)}
         </time>
     );
 
     return (
         <article className="tweet">
-            {retweetedBy && (
+            {retuiteadoPor && (
                 <div className="tweet-context">
-                    {retweetedBy} retwiteó <span className="tweet-dot">·</span> {time}
+                    {retuiteadoPor} retwiteó <span className="tweet-dot">·</span> {hora}
                 </div>
             )}
-            {unavailable ? (
-                <p className="tweet-unavailable">Publicación no disponible</p>
-            ) : (
-                <div className="tweet-main">
-                    <Avatar username={authorUsername}/>
-                    <div className="tweet-body">
-                        <div className="tweet-header">
-                            <span className="tweet-author">{authorUsername}</span>
-                            {!retweetedBy && (
-                                <>
-                                    <span className="tweet-dot">·</span>
-                                    {time}
-                                </>
-                            )}
-                            {onDelete && (
-                                <button type="button" className="tweet-delete" onClick={onDelete} aria-label="Eliminar este tweet">
-                                    Eliminar
-                                </button>
-                            )}
-                        </div>
-                        <p className="tweet-content">{content}</p>
+            <div className="tweet-main">
+                <Avatar nombreUsuario={autor}/>
+                <div className="tweet-body">
+                    <div className="tweet-header">
+                        <span className="tweet-author">{autor}</span>
+                        {!retuiteadoPor && (
+                            <>
+                                <span className="tweet-dot">·</span>
+                                {hora}
+                            </>
+                        )}
+                        {alEliminar && (
+                            <button type="button" className="tweet-delete" onClick={alEliminar} aria-label="Eliminar este tweet">
+                                Eliminar
+                            </button>
+                        )}
                     </div>
+                    {/* Si el tweet original se borró se sigue mostrando quién lo escribió,
+                        pero en lugar del texto va el aviso. */}
+                    {noDisponible
+                        ? <p className="tweet-unavailable">Publicación no disponible</p>
+                        : <p className="tweet-content">{contenido}</p>}
+                    {mostrarAcciones && (
+                        <TweetActions
+                            puedeRetuitear={puedeRetuitear}
+                            retuiteado={retuiteado}
+                            retuiteoOcupado={retuiteoOcupado}
+                            alAlternarRetweet={alAlternarRetweet}
+                        />
+                    )}
                 </div>
-            )}
+            </div>
         </article>
     )
 }

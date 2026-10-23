@@ -2,11 +2,11 @@ package minitwitter.backend.repositorios;
 
 import jakarta.persistence.EntityManager;
 import minitwitter.backend.dto.OriginalTweetInfo;
+import minitwitter.backend.dto.PageResponse;
 import minitwitter.backend.dto.TweetInfo;
 import minitwitter.backend.model.OriginalTweet;
 import minitwitter.backend.model.Tweet;
 
-import java.util.List;
 import java.util.Optional;
 
 public class JpaTweetRepository implements TweetRepository {
@@ -17,52 +17,60 @@ public class JpaTweetRepository implements TweetRepository {
     }
 
     @Override
-    public void save(OriginalTweet tweet) {
+    public void guardar(OriginalTweet tweet) {
         em.persist(tweet);
     }
 
     @Override
-    public Optional<Tweet> findById(Integer id) {
+    public Optional<Tweet> buscarPorId(Integer id) {
         return Optional.ofNullable(em.find(Tweet.class, id));
     }
 
     @Override
-    public void delete(OriginalTweet tweet) {
+    public void eliminar(OriginalTweet tweet) {
         tweet.markAsDeleted();
     }
 
     @Override
-    public List<OriginalTweetInfo> findByAuthorId(Integer userId) {
-        var query = em.createQuery(
+    public PageResponse<OriginalTweetInfo> buscarPorIdAutor(Integer idUsuario, int pagina, int tamanio) {
+        var consulta = em.createQuery(
                 "select o from OriginalTweet o "
-                        + "where o.author.id = :userId and o.deleted = false "
-                        + "order by o.createdAt desc",
+                        + "where o.author.id = :idUsuario and o.deleted = false "
+                        + "order by o.createdAt desc, o.id desc",
                 OriginalTweet.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(OriginalTweet::toInfo).toList();
+        consulta.setParameter("idUsuario", idUsuario);
+        consulta.setFirstResult(desplazamientoDe(pagina, tamanio));
+        consulta.setMaxResults(tamanio);
+        var contenido = consulta.getResultList().stream().map(OriginalTweet::toInfo).toList();
+
+        var conteo = em.createQuery(
+                "select count(o) from OriginalTweet o "
+                        + "where o.author.id = :idUsuario and o.deleted = false",
+                Long.class);
+        conteo.setParameter("idUsuario", idUsuario);
+        return PageResponse.armar(contenido, pagina, tamanio, conteo.getSingleResult());
     }
 
     @Override
-    public List<TweetInfo> findTimelineByAuthorId(Integer userId) {
-        var query = em.createQuery(
-                "select t from Tweet t "
-                        + "where t.author.id = :userId and t.deleted = false "
-                        + "order by t.createdAt desc",
+    public PageResponse<TweetInfo> buscarFeedPorIdSeguidor(Integer idUsuario, int pagina, int tamanio) {
+        var filtroFeed = "where t.deleted = false "
+                + "and (t.author.id = :idUsuario or t.author.id in ("
+                + "select f.followed.id from Follow f where f.follower.id = :idUsuario)) ";
+        var consulta = em.createQuery(
+                "select t from Tweet t " + filtroFeed + "order by t.createdAt desc, t.id desc",
                 Tweet.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(Tweet::toInfo).toList();
+        consulta.setParameter("idUsuario", idUsuario);
+        consulta.setFirstResult(desplazamientoDe(pagina, tamanio));
+        consulta.setMaxResults(tamanio);
+        var contenido = consulta.getResultList().stream().map(Tweet::toInfo).toList();
+
+        var conteo = em.createQuery("select count(t) from Tweet t " + filtroFeed, Long.class);
+        conteo.setParameter("idUsuario", idUsuario);
+        return PageResponse.armar(contenido, pagina, tamanio, conteo.getSingleResult());
     }
 
-    @Override
-    public List<TweetInfo> findFeedByFollowerId(Integer userId) {
-        var query = em.createQuery(
-                "select t from Tweet t "
-                        + "where t.deleted = false "
-                        + "and (t.author.id = :userId or t.author.id in ("
-                        + "select f.followed.id from Follow f where f.follower.id = :userId)) "
-                        + "order by t.createdAt desc",
-                Tweet.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(Tweet::toInfo).toList();
+    // Una página enorme no debe desbordar el int de setFirstResult: se topea y devuelve vacío.
+    private static int desplazamientoDe(int pagina, int tamanio) {
+        return (int) Math.min((long) pagina * tamanio, Integer.MAX_VALUE);
     }
 }

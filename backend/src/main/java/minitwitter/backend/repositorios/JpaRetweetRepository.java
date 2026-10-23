@@ -14,23 +14,23 @@ public class JpaRetweetRepository implements RetweetRepository {
     }
 
     @Override
-    public void save(Retweet retweet) {
+    public void guardar(Retweet retweet) {
         em.persist(retweet);
     }
 
     @Override
-    public void delete(Retweet retweet) {
+    public void eliminar(Retweet retweet) {
         retweet.markAsDeleted();
     }
 
     @Override
-    public List<RetweetInfo> findByAuthorId(Integer userId) {
-        var query = em.createQuery(
+    public List<RetweetInfo> buscarPorIdAutor(Integer idUsuario) {
+        var consulta = em.createQuery(
                 "select r from Retweet r "
-                        + "where r.author.id = :userId and r.deleted = false "
+                        + "where r.author.id = :idUsuario and r.deleted = false "
                         + "order by r.createdAt desc",
                 Retweet.class);
-        query.setParameter("userId", userId);
-        return query.getResultList().stream().map(Retweet::toInfo).toList();
+        consulta.setParameter("idUsuario", idUsuario);
+        return consulta.getResultList().stream().map(Retweet::toInfo).toList();
     }
 }
