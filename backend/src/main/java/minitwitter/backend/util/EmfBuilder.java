@@ -11,6 +11,7 @@ import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.JdbcSettings;
 import org.hibernate.tool.schema.Action;
 
+import java.util.UUID;
 
 public class EmfBuilder {
     public static final String URL_POSTGRES = "jdbc:postgresql://localhost:5433/minitwitter_db";
@@ -18,7 +19,10 @@ public class EmfBuilder {
     public static final String CONTRASENIA_POSTGRES = "postgrespassword";
     public static final String DRIVER_POSTGRES = "org.postgresql.Driver";
 
-    public static final String URL_H2_EN_MEMORIA = "jdbc:h2:mem:minitwitter;DB_CLOSE_DELAY=-1";
+    // El nombre de la base en memoria lleva un sufijo único por cada fábrica (ver h2EnMemoria):
+    // DB_CLOSE_DELAY=-1 la mantiene viva mientras viva la JVM.
+    public static final String PREFIJO_URL_H2_EN_MEMORIA = "jdbc:h2:mem:minitwitter-";
+    public static final String OPCIONES_URL_H2_EN_MEMORIA = ";DB_CLOSE_DELAY=-1";
     public static final String USUARIO_H2 = "sa";
     public static final String CONTRASENIA_H2 = "";
     public static final String DRIVER_H2 = "org.h2.Driver";
@@ -46,7 +50,8 @@ public class EmfBuilder {
     }
 
     public EmfBuilder h2EnMemoria() {
-        configuracion.property(PersistenceConfiguration.JDBC_URL, URL_H2_EN_MEMORIA)
+        var url = PREFIJO_URL_H2_EN_MEMORIA + UUID.randomUUID() + OPCIONES_URL_H2_EN_MEMORIA;
+        configuracion.property(PersistenceConfiguration.JDBC_URL, url)
                 .property(PersistenceConfiguration.JDBC_USER, USUARIO_H2)
                 .property(PersistenceConfiguration.JDBC_PASSWORD, CONTRASENIA_H2)
                 .property(PersistenceConfiguration.JDBC_DRIVER, DRIVER_H2);
