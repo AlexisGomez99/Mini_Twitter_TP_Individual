@@ -14,6 +14,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    public static final String ERROR_PARAMETROS_INVALIDOS = "Parámetros inválidos";
+    public static final String ERROR_NO_AUTENTICADO = "No autenticado";
+    public static final String ERROR_INESPERADO = "Algo salió mal, contactar al administrador.";
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> manejarErroresDeNegocio(RuntimeException excepcion) {
@@ -33,19 +36,19 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException.class,
             MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ErrorResponse> manejarParametrosInvalidos() {
-        ErrorResponse respuestaError = new ErrorResponse("Parámetros inválidos");
+        ErrorResponse respuestaError = new ErrorResponse(ERROR_PARAMETROS_INVALIDOS);
         return ResponseEntity.badRequest().body(respuestaError);
     }
 
     @ExceptionHandler(MissingRequestCookieException.class)
     public ResponseEntity<ErrorResponse> manejarTokenFaltante() {
-        ErrorResponse respuestaError = new ErrorResponse("No autenticado");
+        ErrorResponse respuestaError = new ErrorResponse(ERROR_NO_AUTENTICADO);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(respuestaError);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> manejarErrorInesperado() {
-        ErrorResponse respuestaError = new ErrorResponse("Algo salió mal, contactar al administrador.");
+        ErrorResponse respuestaError = new ErrorResponse(ERROR_INESPERADO);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(respuestaError);
     }
 }

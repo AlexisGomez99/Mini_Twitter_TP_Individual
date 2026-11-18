@@ -17,8 +17,8 @@ public class RetweetController {
 
     @PostMapping("/retweets")
     public void crearRetweet(@RequestBody NewRetweetRequest nuevoRetweet, @CookieValue("token") String token) {
-        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
-        this.servicioTwitter.crearRetweet(nuevoRetweet.userId(), nuevoRetweet.originTweetId());
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.crearRetweet(idUsuario, nuevoRetweet.originTweetId());
     }
 
     @GetMapping("/retweets")
@@ -29,7 +29,7 @@ public class RetweetController {
 
     @DeleteMapping("/retweets/{retweetId}")
     public void eliminarRetweet(@PathVariable("retweetId") Integer idRetweet, @CookieValue("token") String token) {
-        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
-        this.servicioTwitter.eliminarRetweet(idRetweet);
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.eliminarRetweet(idUsuario, idRetweet);
     }
 }

@@ -15,9 +15,6 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
-	<!-- Define las versiones de las dependencias de Spring Boot. No heredamos de
-	     spring-boot-starter-parent (no tenemos <parent>): en cambio, importamos su BOM,
-	     igual que el proyecto de referencia del profesor. -->
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
@@ -116,9 +113,6 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
-				<!-- Versión explícita: sin <parent> (que trae su propio pluginManagement),
-				     Maven puede resolver una versión no deseada (nos pasó: resolvió un
-				     milestone 4.2.0-M1 en vez de la 4.1.0 que usamos en todo el resto). -->
 				<version>4.1.0</version>
 			</plugin>
 			<plugin>

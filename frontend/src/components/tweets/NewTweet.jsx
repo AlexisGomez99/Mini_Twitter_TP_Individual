@@ -5,7 +5,7 @@ import { useAutenticacion } from "../../context/AuthContext.js";
 const MAXIMO_CARACTERES = 280;
 
 export default function NewTweet({ alPublicar }){
-    const { usuario, terminarSesion } = useAutenticacion();
+    const { terminarSesion } = useAutenticacion();
     const [contenido, setContenido] = useState("");
     const [error, setError] = useState(null);
     const [publicado, setPublicado] = useState(false);
@@ -26,7 +26,7 @@ export default function NewTweet({ alPublicar }){
         setError(null);
         setEnviando(true);
         try {
-            await servicioApi.crearTweet(usuario.id, contenido);
+            await servicioApi.crearTweet(contenido);
             setContenido("");
             setPublicado(true);
             alPublicar();

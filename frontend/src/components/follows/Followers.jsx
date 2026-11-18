@@ -7,7 +7,6 @@ import { useAutenticacion } from "../../context/AuthContext.js";
 export default function Followers(){
     const { usuario, terminarSesion } = useAutenticacion();
     const [seguidores, setSeguidores] = useState([]);
-    // Ids de las personas a las que yo sigo: sirve para saber qué botón mostrar en cada seguidor.
     const [idsSeguidos, setIdsSeguidos] = useState(new Set());
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
@@ -37,8 +36,8 @@ export default function Followers(){
         setErrorDeAccion(null);
         setIdOcupado(seguidor.id);
         try {
-            if (yaLoSigo) await servicioApi.dejarDeSeguir(usuario.id, seguidor.id);
-            else await servicioApi.seguir(usuario.id, seguidor.id);
+            if (yaLoSigo) await servicioApi.dejarDeSeguir(seguidor.id);
+            else await servicioApi.seguir(seguidor.id);
             setIdsSeguidos((ids) => {
                 const siguiente = new Set(ids);
                 if (yaLoSigo) siguiente.delete(seguidor.id);

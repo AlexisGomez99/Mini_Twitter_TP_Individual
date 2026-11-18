@@ -1,8 +1,6 @@
 import { Link } from "react-router";
 import Avatar from "../common/Avatar.jsx";
 
-// siguiendo indica si yo sigo a este usuario: define si el botón dice "Seguir" o "Dejar de seguir".
-// ruta (opcional): si se pasa, el nombre es un enlace a esa ruta.
 export default function UserItem({ nombreUsuario, ruta, siguiendo, ocupado, alAlternarSeguir }){
 
     return (

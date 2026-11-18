@@ -33,8 +33,7 @@ export default function Following(){
         setErrorDeAccion(null);
         setIdOcupado(seguido.id);
         try {
-            await servicioApi.dejarDeSeguir(usuario.id, seguido.id);
-            // Ya no lo sigo: sale de la lista.
+            await servicioApi.dejarDeSeguir(seguido.id);
             setUsuariosSeguidos((lista) => lista.filter((item) => item.id !== seguido.id));
         } catch (e) {
             if (e.estado === 401) terminarSesion();

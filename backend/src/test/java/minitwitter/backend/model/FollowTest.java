@@ -1,66 +1,69 @@
 package minitwitter.backend.model;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FollowTest {
 
+    private final User seguidor = new User("agomez", "password123");
+    private final User seguido = new User("jperez", "password456");
+
     @Test
-    void deberiaCrearUnaRelacionDeSeguimientoValidaYRegistrarLaFecha() {
-        // Set up
-        User seguidor = new User("agomez", "password123");
-        User seguido = new User("jperez", "password456");
+    @DisplayName("Crear follow con dos usuarios distintos guarda seguidor, seguido y fecha")
+    void crearFollow_guardaSeguidorSeguidoYFecha() {
+        // Setup: dos usuarios distintos
+        // (los usuarios se crean como campos de la clase)
 
-        // Desarrollo
-        Follow seguir = new Follow(seguidor, seguido);
+        // Ejercitación: crear la relación de seguimiento
+        var follow = new Follow(seguidor, seguido);
 
-        // Evaluación
-        assertThat(seguir.getFollower()).isEqualTo(seguidor);
-        assertThat(seguir.getFollowed()).isEqualTo(seguido);
-        assertThat(seguir.getFollowedAt()).isNotNull();
+        // Verificación: la relación guarda a ambos usuarios y registra la fecha
+        assertSame(seguidor, follow.getFollower(), "El seguidor debe ser el primer usuario recibido");
+        assertSame(seguido, follow.getFollowed(), "El seguido debe ser el segundo usuario recibido");
+        assertNotNull(follow.getFollowedAt(), "La relación debe registrar la fecha en que se creó");
     }
 
     @Test
-    void deberiaFallarCuandoUnUsuarioIntentaSeguirseASiMismo() {
-        // Set up
-        User usuario = new User("agomez", "password123");
+    @DisplayName("Crear follow lanza excepción cuando el seguidor es null")
+    void crearFollow_lanzaExcepcionCuandoSeguidorEsNull() {
+        // Setup: seguidor nulo
+        // (no se necesita setup adicional)
 
-        // Desarrollo
-        // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
-
-        // Evaluación
-        assertThatThrownBy(() -> new Follow(usuario, usuario))
-                .isInstanceOf(DomainException.class)
-                .hasMessage("Un usuario no puede seguirse a sí mismo.");
+        // Ejercitación y Verificación
+        var excepcion = assertThrows(DomainException.class,
+                () -> new Follow(null, seguido));
+        assertEquals(Follow.ERROR_PARTICIPANTES_OBLIGATORIOS, excepcion.getMessage(),
+                "Debe informar que seguidor y seguido son obligatorios");
     }
 
     @Test
-    void deberiaFallarCuandoElSeguidorEsNulo() {
-        // Set up
-        User seguido = new User("jperez", "password456");
+    @DisplayName("Crear follow lanza excepción cuando el seguido es null")
+    void crearFollow_lanzaExcepcionCuandoSeguidoEsNull() {
+        // Setup: seguido nulo
+        // (no se necesita setup adicional)
 
-        // Desarrollo
-        // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
-
-        // Evaluación
-        assertThatThrownBy(() -> new Follow(null, seguido))
-                .isInstanceOf(DomainException.class)
-                .hasMessage("El seguidor y el seguido son obligatorios.");
+        // Ejercitación y Verificación
+        var excepcion = assertThrows(DomainException.class,
+                () -> new Follow(seguidor, null));
+        assertEquals(Follow.ERROR_PARTICIPANTES_OBLIGATORIOS, excepcion.getMessage(),
+                "Debe informar que seguidor y seguido son obligatorios");
     }
 
     @Test
-    void deberiaFallarCuandoElSeguidoEsNulo() {
-        // Set up
-        User seguidor = new User("agomez", "password123");
+    @DisplayName("Crear follow lanza excepción cuando un usuario intenta seguirse a sí mismo")
+    void crearFollow_lanzaExcepcionCuandoUsuarioSeSigueASiMismo() {
+        // Setup: un único usuario que será seguidor y seguido a la vez
+        // (el usuario se crea como campo de la clase)
 
-        // Desarrollo
-        // (la excepción se lanza dentro del constructor, por eso se evalúa con el lambda)
-
-        // Evaluación
-        assertThatThrownBy(() -> new Follow(seguidor, null))
-                .isInstanceOf(DomainException.class)
-                .hasMessage("El seguidor y el seguido son obligatorios.");
+        // Ejercitación y Verificación
+        var excepcion = assertThrows(DomainException.class,
+                () -> new Follow(seguidor, seguidor));
+        assertEquals(Follow.ERROR_SEGUIRSE_A_SI_MISMO, excepcion.getMessage(),
+                "Debe informar que un usuario no puede seguirse a sí mismo");
     }
 }

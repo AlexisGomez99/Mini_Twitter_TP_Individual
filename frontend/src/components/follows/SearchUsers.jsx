@@ -7,7 +7,6 @@ import { useAutenticacion } from "../../context/AuthContext.js";
 export default function SearchUsers(){
     const { usuario, terminarSesion } = useAutenticacion();
     const [usuarios, setUsuarios] = useState([]);
-    // Ids de las personas a las que yo sigo: define si cada resultado muestra "Seguir" o "Dejar de seguir".
     const [idsSeguidos, setIdsSeguidos] = useState(new Set());
     const [busqueda, setBusqueda] = useState("");
     const [cargando, setCargando] = useState(true);
@@ -40,8 +39,8 @@ export default function SearchUsers(){
         setErrorDeAccion(null);
         setIdOcupado(encontrado.id);
         try {
-            if (yaLoSigo) await servicioApi.dejarDeSeguir(usuario.id, encontrado.id);
-            else await servicioApi.seguir(usuario.id, encontrado.id);
+            if (yaLoSigo) await servicioApi.dejarDeSeguir(encontrado.id);
+            else await servicioApi.seguir(encontrado.id);
             setIdsSeguidos((ids) => {
                 const siguiente = new Set(ids);
                 if (yaLoSigo) siguiente.delete(encontrado.id);

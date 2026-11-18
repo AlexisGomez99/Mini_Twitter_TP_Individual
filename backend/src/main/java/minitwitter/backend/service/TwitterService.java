@@ -12,8 +12,18 @@ import java.util.List;
 import java.util.Optional;
 
 public class TwitterService {
-    private static final int TAMANIO_PAGINA_FEED = 20;
-    private static final int TAMANIO_PAGINA_TWEETS = 10;
+    public static final int TAMANIO_PAGINA_FEED = 20;
+    public static final int TAMANIO_PAGINA_TWEETS = 10;
+
+    public static final String ERROR_CREDENCIALES_INCORRECTAS = "Usuario o contraseña incorrectos";
+    public static final String ERROR_TOKEN_INVALIDO = "Token inválido";
+    public static final String ERROR_USUARIO_YA_EXISTE = "El nombre de usuario ya existe";
+
+    public static final String ERROR_USUARIO_NO_ENCONTRADO = "Usuario no encontrado: ";
+    public static final String ERROR_TWEET_NO_ENCONTRADO = "Tweet no encontrado: ";
+    public static final String ERROR_ELIMINAR_TWEET_AJENO = "No podés eliminar un tweet de otra persona";
+    public static final String ERROR_ELIMINAR_RETWEET_AJENO = "No podés eliminar un retweet de otra persona";
+    public static final String ERROR_PAGINA_NEGATIVA = "La página no puede ser negativa";
 
     private final EntityManagerFactory emf;
 
@@ -27,7 +37,7 @@ public class TwitterService {
             var usuarioOptional = UserRepository.repositorioDe(em)
                     .obtenerPorNombreUsuarioYContrasenia(nombreUsuario, contrasenia);
             var usuario = usuarioOptional.orElseThrow(() ->
-                    new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario o contraseña incorrectos"));
+                    new ResponseStatusException(HttpStatus.UNAUTHORIZED, ERROR_CREDENCIALES_INCORRECTAS));
             return notary().generateTokenFor(usuario.identificador());
         });
     }
@@ -36,7 +46,7 @@ public class TwitterService {
         try {
             return notary().verifyToken(token);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido", e);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, ERROR_TOKEN_INVALIDO, e);
         }
     }
 
@@ -44,13 +54,16 @@ public class TwitterService {
         return emf.callInTransaction(em -> {
             var usuarioOptional = UserRepository.repositorioDe(em).obtenerPorNombreUsuario(nombreUsuario);
             usuarioOptional.ifPresent(u -> {
-                throw new RuntimeException("El nombre de usuario ya existe");
+                throw new RuntimeException(ERROR_USUARIO_YA_EXISTE);
             });
             var usuario = new User(nombreUsuario, contrasenia);
             em.persist(usuario);
             return usuario.identificador();
         });
     }
+
+
+
     // --- Usuarios ---
 
     public void agregarUsuario(String nombreUsuario, String contrasenia) {
@@ -68,8 +81,7 @@ public class TwitterService {
         );
     }
 
-    // Caso específico donde sí hace falta buscar por username: por ejemplo, un login,
-    // donde todavía no se conoce el id del usuario.
+
     public Optional<UserInfo> obtenerUsuarioPorNombreUsuario(String nombreUsuario) {
         return emf.callInTransaction(em ->
                 UserRepository.repositorioDe(em).obtenerPorNombreUsuario(nombreUsuario)
@@ -85,9 +97,13 @@ public class TwitterService {
         );
     }
 
+    // esto deberia estar paginado :)
     public List<UserInfo> listarUsuarios() {
         return emf.callInTransaction(em -> UserRepository.repositorioDe(em).listarUsuarios());
     }
+
+
+
 
     // --- Tweets ---
 
@@ -95,12 +111,12 @@ public class TwitterService {
         emf.runInTransaction(em -> {
             var autor = UserRepository.repositorioDe(em).obtenerPorId(idUsuario)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idUsuario));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idUsuario));
             TweetRepository.repositorioDe(em).guardar(new OriginalTweet(autor, contenido));
         });
     }
 
-    // idUsuario es quien pide el borrado: solo el autor puede eliminar su tweet.
+    // solo el autor puede eliminar su tweet.
     public void eliminarTweet(Integer idUsuario, Integer idTweet) {
         emf.runInTransaction(em -> {
             var repositorio = TweetRepository.repositorioDe(em);
@@ -110,7 +126,7 @@ public class TwitterService {
                     .ifPresent(tweet -> {
                         if (!tweet.getAuthor().getId().equals(idUsuario)) {
                             throw new ResponseStatusException(
-                                    HttpStatus.FORBIDDEN, "No podés eliminar un tweet de otra persona");
+                                    HttpStatus.FORBIDDEN, ERROR_ELIMINAR_TWEET_AJENO);
                         }
                         repositorio.eliminar(tweet);
                     });
@@ -133,9 +149,12 @@ public class TwitterService {
 
     private void validarPagina(int pagina) {
         if (pagina < 0) {
-            throw new DomainException("La página no puede ser negativa");
+            throw new DomainException(ERROR_PAGINA_NEGATIVA);
         }
     }
+
+
+
 
     // --- Retweets ---
 
@@ -143,30 +162,40 @@ public class TwitterService {
         emf.runInTransaction(em -> {
             var autor = UserRepository.repositorioDe(em).obtenerPorId(idUsuario)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idUsuario));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idUsuario));
             // No se puede crear un retweet nuevo de un tweet que ya no está disponible,
             // aunque sí se puede seguir consultando uno ya existente (ver buscarPorId).
             var origen = TweetRepository.repositorioDe(em).buscarPorId(idTweetOrigen)
                     .filter(tweet -> !tweet.isDeleted())
-                    .orElseThrow(() -> new DomainException("Tweet no encontrado: " + idTweetOrigen));
+                    .orElseThrow(() -> new DomainException(ERROR_TWEET_NO_ENCONTRADO + idTweetOrigen));
             RetweetRepository.repositorioDe(em).guardar(new Retweet(autor, origen));
         });
     }
 
-    public void eliminarRetweet(Integer idRetweet) {
+    // idUsuario es quien pide el borrado: solo el autor puede eliminar su retweet.
+    public void eliminarRetweet(Integer idUsuario, Integer idRetweet) {
         emf.runInTransaction(em -> {
             // Se busca con TweetRepository (la clase base) porque un retweet es un Tweet;
             // TweetRepository.buscarPorId ya está pensado para devolver cualquier subtipo.
             TweetRepository.repositorioDe(em).buscarPorId(idRetweet)
                     .filter(tweet -> tweet instanceof Retweet)
                     .map(tweet -> (Retweet) tweet)
-                    .ifPresent(RetweetRepository.repositorioDe(em)::eliminar);
+                    .ifPresent(retweet -> {
+                        if (!retweet.getAuthor().getId().equals(idUsuario)) {
+                            throw new ResponseStatusException(
+                                    HttpStatus.FORBIDDEN, ERROR_ELIMINAR_RETWEET_AJENO);
+                        }
+                        RetweetRepository.repositorioDe(em).eliminar(retweet);
+                    });
         });
     }
 
     public List<RetweetInfo> listarRetweetsDelUsuario(Integer idUsuario) {
         return emf.callInTransaction(em -> RetweetRepository.repositorioDe(em).buscarPorIdAutor(idUsuario));
     }
+
+
+
 
     // --- Follows ---
 
@@ -175,13 +204,12 @@ public class TwitterService {
             var repositorioUsuarios = UserRepository.repositorioDe(em);
             var seguidor = repositorioUsuarios.obtenerPorId(idSeguidor)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguidor));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idSeguidor));
             var seguido = repositorioUsuarios.obtenerPorId(idSeguido)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguido));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idSeguido));
             var repositorioFollows = FollowRepository.repositorioDe(em);
-            // Seguir a alguien que ya se sigue no hace nada (igual que dejarDeSeguir), en vez de
-            // chocar contra la restricción de unicidad de la base y devolver su mensaje de error.
+            // un follow que ya existe choca contra unique de la bd
             if (!repositorioFollows.estaSiguiendo(idSeguidor, idSeguido)) {
                 repositorioFollows.seguir(seguidor, seguido);
             }
@@ -193,10 +221,10 @@ public class TwitterService {
             var repositorioUsuarios = UserRepository.repositorioDe(em);
             var seguidor = repositorioUsuarios.obtenerPorId(idSeguidor)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguidor));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idSeguidor));
             var seguido = repositorioUsuarios.obtenerPorId(idSeguido)
                     .filter(usuario -> !usuario.isDeleted())
-                    .orElseThrow(() -> new DomainException("Usuario no encontrado: " + idSeguido));
+                    .orElseThrow(() -> new DomainException(ERROR_USUARIO_NO_ENCONTRADO + idSeguido));
             FollowRepository.repositorioDe(em).dejarDeSeguir(seguidor, seguido);
         });
     }

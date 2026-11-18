@@ -16,11 +16,17 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
 
+    public static final int LARGO_MINIMO_NOMBRE_USUARIO = 5;
+    public static final int LARGO_MAXIMO_NOMBRE_USUARIO = 25;
+    public static final String ERROR_NOMBRE_USUARIO_INVALIDO = "El nombre de usuario debe tener entre "
+            + LARGO_MINIMO_NOMBRE_USUARIO + " y " + LARGO_MAXIMO_NOMBRE_USUARIO + " caracteres.";
+    public static final String ERROR_CONTRASENIA_OBLIGATORIA = "La contraseña es obligatoria.";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false, unique = true, length = 25)
+    @Column(nullable = false, unique = true, length = LARGO_MAXIMO_NOMBRE_USUARIO)
     private String username;
 
     @Column(nullable = false)
@@ -28,18 +34,12 @@ public class User {
 
     private LocalDateTime createdAt;
 
-    // "Borrar" un usuario no elimina la fila: un tweet suyo puede seguir siendo
-    // el origen de un retweet de otra persona, y esa referencia no debe romperse.
-    // En cambio se marca deleted=true y sus tweets propios se ocultan en cascada.
     @Column(nullable = false)
     private boolean deleted;
 
     @OneToMany(mappedBy = "author")
     private List<Tweet> tweets = new ArrayList<>();
 
-    // Relaciones de Follow donde este usuario es el seguidor/el seguido. A diferencia de
-    // los tweets, un follow no tiene valor propio una vez que una de las cuentas
-    // desaparece, así que sí se borran de verdad (ver markAsDeleted).
     @OneToMany(mappedBy = "follower", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followsAsFollower = new ArrayList<>();
 
@@ -49,7 +49,7 @@ public class User {
     public User(String username, String password) {
         setUsername(username);
         if (password == null || password.isBlank()) {
-            throw new DomainException("La contraseña es obligatoria.");
+            throw new DomainException(ERROR_CONTRASENIA_OBLIGATORIA);
         }
         //encriptar antes de guardar
         this.password = password;
@@ -57,15 +57,15 @@ public class User {
     }
 
     private void setUsername(String username) {
-        if (username == null || username.length() < 5 || username.length() > 25) {
-            throw new DomainException("El nombre de usuario debe tener entre 5 y 25 caracteres.");
+        if (username == null
+                || username.length() < LARGO_MINIMO_NOMBRE_USUARIO
+                || username.length() > LARGO_MAXIMO_NOMBRE_USUARIO) {
+            throw new DomainException(ERROR_NOMBRE_USUARIO_INVALIDO);
         }
         this.username = username;
     }
 
-    // Soft delete: la fila se conserva para no romper referencias externas (retweets
-    // de otros usuarios sobre tweets de este). Sus propios tweets se ocultan en cascada,
-    // y sus relaciones de follow (en ambos sentidos) sí se eliminan.
+    // Soft delete
     public void markAsDeleted() {
         this.deleted = true;
         this.tweets.forEach(Tweet::markAsDeleted);

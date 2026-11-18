@@ -17,8 +17,8 @@ public class TweetController {
 
     @PostMapping("/tweets")
     public void crearTweet(@RequestBody NewTweetRequest nuevoTweet, @CookieValue("token") String token) {
-        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
-        this.servicioTwitter.crearTweet(nuevoTweet.userId(), nuevoTweet.content());
+        int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.crearTweet(idUsuario, nuevoTweet.content());
     }
 
     @GetMapping("/tweets")
@@ -27,7 +27,6 @@ public class TweetController {
         return this.servicioTwitter.listarTweetsDelUsuario(idUsuario, pagina);
     }
 
-    // El usuario sale del token: es el feed de quien está logueado.
     @GetMapping("/tweets/feed")
     public PageResponse<TweetInfo> feed(@RequestParam(name = "page", defaultValue = "0") int pagina, @CookieValue("token") String token) {
         int idUsuario = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);

@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Profile;
 @Profile("default")
 public class AppConfiguration {
 
+    // aca se crea la instancia para poder pasarsela a otra clase y se lo pasa por constructor
     @Bean
     public TwitterService servicioTwitter() {
         var emf = new EmfBuilder()

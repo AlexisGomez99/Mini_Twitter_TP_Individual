@@ -45,8 +45,8 @@ const servicioApi = {
     eliminarUsuario: (id) => pedir(`/users/${id}`, { metodo: "DELETE" }),
 
     // --- Tweets ---
-    crearTweet: (idUsuario, contenido) =>
-        pedir("/tweets", { metodo: "POST", cuerpo: { userId: idUsuario, content: contenido } }),
+    crearTweet: (contenido) =>
+        pedir("/tweets", { metodo: "POST", cuerpo: { content: contenido } }),
     // Los tweets y el feed vienen paginados: la página empieza en 0 y la respuesta es
     // { content, page, totalPages, totalElements, hasNext }.
     obtenerTweetsDelUsuario: (idUsuario, pagina = 0) => pedir(`/tweets?userId=${idUsuario}&page=${pagina}`),
@@ -54,16 +54,16 @@ const servicioApi = {
     eliminarTweet: (idTweet) => pedir(`/tweets/${idTweet}`, { metodo: "DELETE" }),
 
     // --- Retweets ---
-    crearRetweet: (idUsuario, idTweetOrigen) =>
-        pedir("/retweets", { metodo: "POST", cuerpo: { userId: idUsuario, originTweetId: idTweetOrigen } }),
+    crearRetweet: (idTweetOrigen) =>
+        pedir("/retweets", { metodo: "POST", cuerpo: { originTweetId: idTweetOrigen } }),
     obtenerRetweetsDelUsuario: (idUsuario) => pedir(`/retweets?userId=${idUsuario}`),
     eliminarRetweet: (idRetweet) => pedir(`/retweets/${idRetweet}`, { metodo: "DELETE" }),
 
     // --- Follows ---
-    seguir: (idSeguidor, idSeguido) =>
-        pedir("/follows", { metodo: "POST", cuerpo: { followerId: idSeguidor, followedId: idSeguido } }),
-    dejarDeSeguir: (idSeguidor, idSeguido) =>
-        pedir(`/follows?followerId=${idSeguidor}&followedId=${idSeguido}`, { metodo: "DELETE" }),
+    seguir: (idSeguido) =>
+        pedir("/follows", { metodo: "POST", cuerpo: { followedId: idSeguido } }),
+    dejarDeSeguir: (idSeguido) =>
+        pedir(`/follows?followedId=${idSeguido}`, { metodo: "DELETE" }),
     estaSiguiendo: (idSeguidor, idSeguido) =>
         pedir(`/follows/is-following?followerId=${idSeguidor}&followedId=${idSeguido}`),
     obtenerSeguidores: (idUsuario) => pedir(`/follows/followers?userId=${idUsuario}`),

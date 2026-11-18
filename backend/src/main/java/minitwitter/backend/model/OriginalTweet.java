@@ -14,7 +14,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OriginalTweet extends Tweet {
 
-    @Column(length = 280)
+    public static final int LARGO_MAXIMO_CONTENIDO = 280;
+    public static final String ERROR_CONTENIDO_INVALIDO = "El tweet debe tener entre 1 y "
+            + LARGO_MAXIMO_CONTENIDO + " caracteres.";
+
+    @Column(length = LARGO_MAXIMO_CONTENIDO)
     private String content;
 
     public OriginalTweet(User author, String content) {
@@ -24,17 +28,15 @@ public class OriginalTweet extends Tweet {
     }
 
     private void validateContent(String content) {
-        if (content == null || content.trim().isEmpty() || content.length() > 280) {
-            throw new DomainException("El tweet debe tener entre 1 y 280 caracteres.");
+        if (content == null || content.trim().isEmpty() || content.length() > LARGO_MAXIMO_CONTENIDO) {
+            throw new DomainException(ERROR_CONTENIDO_INVALIDO);
         }
     }
 
-    // Un tweet borrado conserva su texto en la base (para poder mostrarlo más adelante);
-    // lo que se oculta al mostrarlo es decisión de toInfo().
     @Override
     public OriginalTweetInfo toInfo() {
-        String authorUsername = getAuthor().isDeleted() ? "Cuenta eliminada" : getAuthor().getUsername();
-        String content = isDeleted() ? "Publicación no disponible" : getContent();
+        String authorUsername = getAuthor().isDeleted() ? NOMBRE_CUENTA_ELIMINADA : getAuthor().getUsername();
+        String content = isDeleted() ? TEXTO_PUBLICACION_NO_DISPONIBLE : getContent();
         return new OriginalTweetInfo(getId(), authorUsername, content, getCreatedAt());
     }
 }

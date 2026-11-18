@@ -17,13 +17,13 @@ public class FollowController {
 
     @PostMapping("/follows")
     public void seguir(@RequestBody FollowRequest pedidoSeguir, @CookieValue("token") String token) {
-        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
-        this.servicioTwitter.seguir(pedidoSeguir.followerId(), pedidoSeguir.followedId());
+        int idSeguidor = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+        this.servicioTwitter.seguir(idSeguidor, pedidoSeguir.followedId());
     }
 
     @DeleteMapping("/follows")
-    public void dejarDeSeguir(@RequestParam("followerId") Integer idSeguidor, @RequestParam("followedId") Integer idSeguido, @CookieValue("token") String token) {
-        this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
+    public void dejarDeSeguir(@RequestParam("followedId") Integer idSeguido, @CookieValue("token") String token) {
+        int idSeguidor = this.servicioTwitter.verificarTokenYObtenerIdUsuario(token);
         this.servicioTwitter.dejarDeSeguir(idSeguidor, idSeguido);
     }
 

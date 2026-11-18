@@ -19,6 +19,10 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public abstract class Tweet {
 
+    public static final String ERROR_AUTOR_OBLIGATORIO = "El tweet debe tener un autor.";
+    public static final String TEXTO_PUBLICACION_NO_DISPONIBLE = "Publicación no disponible";
+    public static final String NOMBRE_CUENTA_ELIMINADA = "Cuenta eliminada";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
@@ -27,26 +31,21 @@ public abstract class Tweet {
     @JoinColumn(name = "user_id", nullable = false)
     private User author;
 
-    // Setter público solo acá: hace falta en los tests para fijar la fecha de creación
-    // y así garantizar el orden del timeline sin depender de LocalDateTime.now().
+    // Setter público solo acá
     @Setter
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    // Soft delete: se conserva la fila (sin cascade/orphanRemoval acá) para que un
-    // retweet de otro usuario que tenga a este tweet como origen no pierda su referencia.
+    // Soft delete
     @Column(nullable = false)
     private boolean deleted;
 
-    // Retweets que tienen a este tweet como origen. Sin cascade: borrar (soft-delete)
-    // este tweet no debe tocar para nada los retweets que lo referencian, para que
-    // puedan seguir mostrándose (con el origen marcado como no disponible).
     @OneToMany(mappedBy = "origin")
     private List<Retweet> retweets = new ArrayList<>();
 
     protected Tweet(User author) {
         if (author == null) {
-            throw new DomainException("El tweet debe tener un autor.");
+            throw new DomainException(ERROR_AUTOR_OBLIGATORIO);
         }
         this.author = author;
         this.createdAt = LocalDateTime.now();

@@ -17,42 +17,38 @@ import org.hibernate.annotations.OnDeleteAction;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Retweet extends Tweet {
 
+    public static final String ERROR_ORIGEN_NULO = "El tweet de origen no puede ser nulo.";
+    public static final String ERROR_RETWEET_PROPIO = "No podés hacer re-tweet de tu propio tweet.";
+
     @ManyToOne
     @JoinColumn(name = "origin_tweet_id")
-    // El flujo normal de la app ya no borra tweets físicamente (ver Tweet.markAsDeleted):
-    // el origen se conserva siempre, marcado como no disponible en vez de eliminado.
-    // Este ON DELETE CASCADE es solo un respaldo a nivel de esquema, por si algún borrado
-    // llegara a la base sin pasar por JPA (SQL directo, otra app, una migración manual).
+
     @OnDelete(action = OnDeleteAction.CASCADE)
     private Tweet origin;
 
     public Retweet(User author, Tweet origin) {
         super(author);
         if (origin == null) {
-            throw new DomainException("El tweet de origen no puede ser nulo.");
+            throw new DomainException(ERROR_ORIGEN_NULO);
         }
         if (origin.getAuthor().equals(author)) {
-            throw new DomainException("No podés hacer re-tweet de tu propio tweet.");
+            throw new DomainException(ERROR_RETWEET_PROPIO);
         }
         this.origin = origin;
     }
 
     @Override
     public RetweetInfo toInfo() {
-        String authorUsername = getAuthor().isDeleted() ? "Cuenta eliminada" : getAuthor().getUsername();
+        String authorUsername = getAuthor().isDeleted() ? NOMBRE_CUENTA_ELIMINADA : getAuthor().getUsername();
         String originalAuthorUsername;
         String originalContent;
-        // Se reutiliza el toInfo() del origen para no duplicar la lógica de "no disponible"
-        // (tweet borrado y/o cuenta eliminada). Si el origen no es un OriginalTweet (por
-        // ejemplo, ya fue borrado y reemplazado por otro tipo en el futuro) no hay
-        // contenido propio que mostrar.
         if (getOrigin() instanceof OriginalTweet originalTweet) {
             var originInfo = originalTweet.toInfo();
             originalAuthorUsername = originInfo.authorUsername();
             originalContent = originInfo.content();
         } else {
-            originalAuthorUsername = "Cuenta eliminada";
-            originalContent = "Publicación no disponible";
+            originalAuthorUsername = NOMBRE_CUENTA_ELIMINADA;
+            originalContent = TEXTO_PUBLICACION_NO_DISPONIBLE;
         }
         return new RetweetInfo(
                 getId(), authorUsername,
